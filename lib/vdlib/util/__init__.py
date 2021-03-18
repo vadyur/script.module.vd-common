@@ -8,6 +8,9 @@ else:
     from urllib import pathname2url
     from urllib2 import urlopen
 
+from .string import decode_string
+
 def path2url(path):
     return urljoin('file:', pathname2url(path))
 
+    

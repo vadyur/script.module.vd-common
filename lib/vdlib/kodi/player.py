@@ -34,9 +34,6 @@ def _log(s):
 	debug(u'vdlib.kodi.player: {}'.format(decode_string(s)))
 
 def play_torrent(path, settings, info_dialog, title_dialog):
-	import vsdbg
-	vsdbg.breakpoint()
-
 	player = None
 	
 	try:

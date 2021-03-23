@@ -93,12 +93,8 @@ class TorrentPlayer(object):
 					except UnicodeDecodeError:
 						pass
 				else:
-					import vsdbg
-					#vsdbg._bp()
 					print_tb()
 			except BaseException as e:
-				import vsdbg
-				#vsdbg._bp()
 				print_tb()
 				
 		return name

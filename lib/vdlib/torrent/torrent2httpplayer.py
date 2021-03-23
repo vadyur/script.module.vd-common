@@ -45,6 +45,7 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 		self.pre_buffer_bytes 	= self.debug_assignment(int(getSetting('pre_buffer_bytes'))*1024*1024, 'pre_buffer_bytes')
 		
 		self.debug('__init__')
+		self.debug(_ADDON_NAME)
 
 		TorrentPlayer.__init__(self)
 		

@@ -38,6 +38,7 @@ def play_torrent(path, settings, info_dialog, title_dialog):
 	vsdbg.breakpoint()
 
 	player = None
+	
 	try:
 		_log(path)
 		torrent_player = settings.get_setting('torrent_player')
@@ -104,6 +105,10 @@ def play_torrent(path, settings, info_dialog, title_dialog):
 			xbmc.sleep(1000)
 
 		_log('!!!!!!!!!!!!!!!!! END PLAYING !!!!!!!!!!!!!!!!!!!!!')
+	except BaseException as e:
+		from ..util.log import print_tb
+		print_tb(e)
+
 	finally:
 		if player:		
 			player.close()

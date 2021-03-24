@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import log
+from vdlib.util.string import decode_string
+from ..util import log
 
 from torrent2http import State, Engine, MediaType, Encryption
-#from contextlib import closing
-from torrentplayer import TorrentPlayer
+from .torrentplayer import TorrentPlayer
 
-import urlparse, urllib, time, filesystem, xbmc, xbmcaddon
+import time, xbmc, xbmcaddon
+from ..util import path2url, filesystem
 
-def path2url(path):
-	return urlparse.urljoin('file:', urllib.pathname2url(path))
 	
 _addon      =   xbmcaddon.Addon('')
 _ADDON_NAME =   _addon.getAddonInfo('id')
@@ -46,6 +45,9 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 		self.pre_buffer_bytes 	= self.debug_assignment(int(getSetting('pre_buffer_bytes'))*1024*1024, 'pre_buffer_bytes')
 		
 		self.debug('__init__')
+		self.debug(_ADDON_NAME)
+
+		TorrentPlayer.__init__(self)
 		
 	def close(self):
 		if self.engine != None:
@@ -61,8 +63,8 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 	def _AddTorrent(self, path):
 
 		if filesystem.exists(path):
-			if path.startswith(r'\\'):
-				tempPath = xbmc.translatePath('special://temp').decode('utf-8')
+			if path.startswith(r'\\') or '://' in path:
+				tempPath = decode_string(xbmc.translatePath('special://temp'))
 				destPath = filesystem.join(tempPath, 't2h.torrent')
 				filesystem.copyfile(path, destPath)
 				path = destPath
@@ -77,7 +79,7 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 		if getSetting('add_tracker'):
 			add_trackers.append(getSetting('add_tracker'))
 
-		download_path = self.settings.storage_path
+		download_path = getSetting('storage_path')
 		if download_path == '':
 			download_path = xbmc.translatePath('special://temp')
 			
@@ -94,24 +96,31 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 			connections_limit = None
 
 		use_random_port = self.debug_assignment( True if getSetting('use_random_port') == 'true' else False, 'use_random_port')
-		listen_port = self.debug_assignment( int(getSetting("listen_port")) if getSetting("listen_port") != "" else 6881, "listen_port")
+		listen_port = self.debug_assignment( int(getSetting("listen_port")) if getSetting("listen_port") != "" else 62881, "listen_port")
+		if listen_port == 6881:
+			use_random_port = True
+
+		keep_files = decode_string(getSetting('action_files')) != u'удалить'
 		
 		args = {'uri': uri, 'download_path': download_path, 'user_agent': user_agent, 'encryption': encryption,
 							'upload_kbps': upload_limit, 'download_kbps': download_limit, 'connections_limit': connections_limit,
-							'keep_incomplete': False, 'keep_complete': True, 'keep_files': True, 'dht_routers': dht_routers, 'use_random_port': use_random_port, 'listen_port': listen_port,
+							'keep_incomplete': False, 'keep_complete': keep_files, 'keep_files': keep_files, 'dht_routers': dht_routers, 'use_random_port': use_random_port, 'listen_port': listen_port,
 							'log_files_progress': True, 'trackers': add_trackers, 'startup_timeout': 1000 }
 
 		try:
-			args['resume_file'] = filesystem.join(self.settings.torrents_path(), self.info_hash + '.resume')
+			if keep_files:
+				args['resume_file'] = filesystem.join(self.settings.torrents_path(), self.info_hash + '.resume')
 		except BaseException as e:
 			log.print_tb(e)
-			args['resume_file'] = filesystem.join(download_path, self.info_hash + '.resume')
-		self.debug('resume file is: ' + args['resume_file'])
+			if keep_files:
+				args['resume_file'] = filesystem.join(download_path, self.info_hash + '.resume')
+
+		if args.get('resume_file'):
+			self.debug('resume file is: ' + args['resume_file'])
 
 		self.engine = Engine(**args)
 
-		#self.engine.start()
-		
+
 	def CheckTorrentAdded(self):
 		if self.engine:
 			status = self.engine.status()
@@ -148,40 +157,15 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 		playable_items = []
 		for item in files:
 			if TorrentPlayer.is_playable(item.name):
-				playable_items.append({'index': item.index, 'name': item.name, 'size': long(item.size)})
+				playable_items.append({'index': item.index, 'name': item.name, 'size': int(item.size)})
 		
 		return { 'info_hash': info_hash, 'files': playable_items }
 		
 	def StartBufferFile(self, fileIndex):
 		self._AddTorrent(self.path)
 
-		'''
-		try:
-			files = self.engine.list()
-			debug('StartBufferFile: has files')
-			item = files[fileIndex]
-			debug('StartBufferFile: has item')
-			local_file = filesystem.join(self.download_path, item.name)
-			debug('StartBufferFile: local_file = ' + local_file.encode('utf-8'))
-			if filesystem.exists(local_file):
-				debug('StartBufferFile: %s exists' % local_file.encode('utf-8'))
-				self.download_path = local_file
-				self.engine.close()	
-				return
-			else:
-				debug('StartBufferFile: %s is not exists' % local_file.encode('utf-8'))
-				self.download_path = None
-		except:
-			debug('StartBufferFile: exception trown')
-			self.download_path = None
-		'''
-
 		self.download_path = None
-		
-		#if fileIndex != 0:
-		#self.engine.close()
 		self.engine.start(fileIndex)
-		#status = self.engine.file_status(fileIndex)
 		self.file_id = fileIndex
 		
 		self.debug('StartBufferFile: %d' % fileIndex)
@@ -214,6 +198,13 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 		
 	
 		return progress
+
+	def updateCheckingProgress(self, progressBar):
+		status = self.engine.status()
+		percents = int(status.progress * 100)
+		if percents > 99:
+			percents = 99
+		progressBar.update(percents, u'Проверка файлов...', ' ', ' ')
 
 	def updateDialogInfo(self, progress, progressBar):
 		f_status = self.engine.file_status(self.file_id)

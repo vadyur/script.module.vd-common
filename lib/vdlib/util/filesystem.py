@@ -1,6 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
 
-import os, sys, log
+import os, sys
+
+from .string import decode_string
+from . import log
 try:
 	import xbmc, xbmcvfs
 except ImportError: pass
@@ -17,31 +20,15 @@ def get_filesystem_encoding():
 
 
 def ensure_unicode(string, encoding=get_filesystem_encoding()):
-	if isinstance(string, str):
-		string = string.decode(encoding)
-		
-	if __DEBUG__:
-		log.debug('\tensure_unicode(%s, encoding=%s)' % (string.encode('utf-8'), encoding))
+	if sys.version_info < (3, 0):
+		if isinstance(string, str):
+			string = string.decode(encoding)
+	else:
+		string = decode_string(string)
 		
 	return string
 
 _cwd = ensure_unicode(os.getcwd(), get_filesystem_encoding())
-
-
-def get_path(path):
-	errors='strict'
-
-	try:
-		import xbmcvfs
-	except ImportError:
-		if path.startswith('smb://') and os.name == 'nt':
-			path = path.replace('smb://', r'\\').replace('/', '\\')
-
-	path = ensure_unicode(path)
-
-	if os.name == 'nt':
-		return path
-	return path.encode(get_filesystem_encoding(), errors)
 
 
 def _is_abs_path(path):
@@ -61,36 +48,80 @@ def _is_abs_path(path):
 
 	return False
 
-def xbmcvfs_path(path):
-	if isinstance(path, unicode):
-		u8path = path.encode('utf-8')
-	else:
-		u8path = path
+def test_path(path):
+	if not _is_abs_path(path):
+		pass
+	return path
 
-	if _is_abs_path(path):
-		return xbmc.translatePath(u8path)
+def _get_path(path, use_unc_path=True):
+	errors='strict'
+
+	try:
+		import xbmcvfs
+	except ImportError:
+		if path.startswith('smb://') and os.name == 'nt' and use_unc_path:
+			path = path.replace('smb://', r'\\').replace('/', '\\')
+
+	path = ensure_unicode(path)
+
+	if os.name == 'nt':
+		return path
+
+	if sys.version_info >= (3, 0):
+		return path
+
+	return path.encode(get_filesystem_encoding(), errors)
+
+def get_path(path):
+	return test_path(_get_path(path))
+
+
+def xbmcvfs_path(path):
+	if sys.version_info >= (3, 0):
+		return xbmcvfs.translatePath( decode_string(path) )
 	else:
-		return xbmc.translatePath(os.path.join(_cwd.encode('utf-8'), u8path))
+		if isinstance(path, unicode):
+			u8path = path.encode('utf-8')
+		else:
+			u8path = path
+
+		if _is_abs_path(path):
+			return xbmc.translatePath(u8path)
+		else:
+			return xbmc.translatePath(os.path.join(_cwd.encode('utf-8'), u8path))
 
 def exists(path):
-	try:
-		if '://' in path or ( not _is_abs_path(path) and '://' in _cwd ):
-			import stat
-			if stat.S_ISDIR(xbmcvfs.Stat(xbmcvfs_path(path)).st_mode()):
-				return True
+	def xbmcvfs_exists(path):
+		import stat
+		if stat.S_ISDIR(xbmcvfs.Stat(xbmcvfs_path(path)).st_mode()):
+			return True
+		return xbmcvfs.exists(xbmcvfs_path(path))
 
-			return xbmcvfs.exists(xbmcvfs_path(path))
-		else:
-			return os.path.exists(get_path(path))
-	except BaseException as e:
+	def os_path_exists(path):
+		if path.startswith('smb://') and os.name == 'nt':
+			path = path.replace('smb://', r'\\').replace('/', '\\')
 		return os.path.exists(get_path(path))
+
+	try:
+		if path.startswith('smb://') and os.name == 'nt':
+			return os_path_exists(path)
+		elif '://' in path or ( not _is_abs_path(path) and '://' in _cwd ):
+			return xbmcvfs_exists(path)
+		else:
+			return os_path_exists(path)
+
+	except BaseException as e:
+		return False
 
 
 def getcwd():
 	if '://' in _cwd:
 		return _cwd
 	else:
-		return ensure_unicode(os.getcwd(), get_filesystem_encoding())
+		try:
+			return ensure_unicode(os.getcwd(), get_filesystem_encoding())
+		except OSError:
+			return _cwd
 
 
 def makedirs(path):
@@ -130,32 +161,21 @@ def save_make_chdir(new_path):
 		return current
 
 
-class save_make_chdir_context(object):
+from .log import dump_context
+class save_make_chdir_context(dump_context):
 
-	def __init__(self, path):
+	def __init__(self, path, module='save_make_chdir_context', use_timestamp=True):
 		self.newPath = path
+		dump_context.__init__(self, module, use_timestamp)
 
 	# context management
 	def __enter__(self):
-		self.savePath = getcwd()
 		if not exists(self.newPath):
 			makedirs(self.newPath)
-		chdir(self.newPath)
 
-		log.debug(u'save_make_chdir_context: enter to %s from %s' % (self.newPath, self.savePath))
+		return dump_context.__enter__(self)
 
-		return self
-
-	def __exit__(self, exc_type, exc_val, exc_tb):
-
-		log.debug(u'save_make_chdir_context: exit from %s to %s' % (getcwd(), self.savePath))
-
-		chdir(self.savePath)
-		if exc_type:
-			import traceback
-			traceback.print_exception(exc_type, exc_val, exc_tb, limit=10, file=sys.stderr)
-			log.debug("!!error!! " + str(exc_val))
-			return True
+	# __exit__ in dump_context
 
 
 def isfile(path):
@@ -186,7 +206,9 @@ def normpath(path):
 	
 def fopen(path, mode):
 	try:
-		from StringIO import StringIO
+		import xbmcvfs
+
+		from io import StringIO
 		class File(StringIO):
 			def __enter__(self):
 				return self
@@ -253,14 +275,14 @@ def fopen(path, mode):
 
 	
 def join(path, *paths):
-	path = get_path(path)
+	path = _get_path(path, use_unc_path=False)
 	fpaths = []
 	for p in paths:
-		fpaths.append( get_path(p) )
+		fpaths.append( _get_path(p) )
 	res = ensure_unicode(os.path.join(path, *tuple(fpaths)), get_filesystem_encoding())
 	if '://' in res:
 		res = res.replace('\\', '/')
-	return res
+	return test_path(res)
 
 
 def listdir(path):
@@ -274,7 +296,7 @@ def listdir(path):
 	except:
 		path = get_path(path)
 		if path.startswith(r'\\'):
-			with save_make_chdir_context(path):
+			with save_make_chdir_context(path, 'filesystem'):
 				for p in os.listdir('.'):
 					ld.append(ensure_unicode(p))
 		else:
@@ -324,14 +346,40 @@ def getctime(path):
 
 
 def dirname(path):
-	return ensure_unicode(os.path.dirname(get_path(path)))
+	return ensure_unicode(os.path.dirname(_get_path(path, use_unc_path=False)))
 
 
 def basename(path):
-	return ensure_unicode(os.path.basename(get_path(path)))
+	return ensure_unicode(os.path.basename(_get_path(path, use_unc_path=False)))
 
+
+def touch(path):
+	with fopen(path, 'w'):
+		pass
+
+def normseps(path):
+	import re
+
+	if os.name == 'nt':
+		if path.startswith(r'\\') or re.match(r'\w:', path):
+			return path.replace('/', '\\')
+
+	if '://' in path or path.startswith('/'):
+		return path.replace('\\', '/')
+
+	return path
 
 def test():	
+
+	tst_name = u'/storage/mnt/D/MA/Videos/TVShows/Звездный путь Дискавери\\Season 2\\10. episode_s02e10.strm'
+	tst_nam2 = u'd:/mnt/D/MA/Videos/TVShows/Звездный путь Дискавери\\Season 2\\10. episode_s02e10.strm'
+	tst_nam3 = u'\\\\media\mnt/D/MA/Videos/TVShows/Звездный путь Дискавери\\Season 2\\10. episode_s02e10.strm'
+	
+	tst_name = normseps(tst_name)
+	tst_nam2 = normseps(tst_nam2)
+	tst_nam3 = normseps(tst_nam3)
+	
+
 	log.debug('Filesystem encoding: %s' % get_filesystem_encoding())
 	log.debug('getcwd(): %s' % getcwd().encode('utf-8'))
 	log.debug('relpath(getcwd(), ".."): %s' % relpath(getcwd(), "..").encode('utf-8'))

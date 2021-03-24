@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import log
-from log import debug
+from ..util.log import debug
 
 
 import requests, urllib
-from torrentplayer import TorrentPlayer
+from .torrentplayer import TorrentPlayer
 
 class YATPPlayer(TorrentPlayer):
 	
@@ -57,7 +56,7 @@ class YATPPlayer(TorrentPlayer):
 		index = 0
 		for file in torr_data['files']:
 			if TorrentPlayer.is_playable(file[0]):
-				files.append({'index': index, 'name': file[0], 'size': long(file[1])})
+				files.append({'index': index, 'name': file[0], 'size': int(file[1])})
 			index = index + 1
 			
 		return { 'info_hash': self.info_hash, 'files': files }

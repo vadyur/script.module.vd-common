@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from torrentplayer import TorrentPlayer
-import filesystem
+from .torrentplayer import TorrentPlayer
+from ..util import filesystem
 import base64
 
-from log import debug
+from ..util.log import debug
 
 
 class AcePlayer(TorrentPlayer):

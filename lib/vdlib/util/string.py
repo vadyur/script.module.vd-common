@@ -17,3 +17,6 @@ else:
         if isinstance(s, str):
             return s.decode(codepage)
         return unicode(s)
+
+def colored(s, color):
+    return '[COLOR={}]{}[/COLOR]'.format(color, s) 

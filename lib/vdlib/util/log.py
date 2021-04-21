@@ -7,6 +7,8 @@ except:
 
 from .string import decode_string
 
+from . import filesystem
+
 import inspect
 
 try:
@@ -60,7 +62,7 @@ def lineno():
 	return inspect.currentframe().f_back.f_lineno
 
 def fprint_tb(filename):
-	import sys, filesystem
+	import sys
 	exc_type, exc_val, exc_tb = sys.exc_info()
 	import traceback
 
@@ -81,7 +83,6 @@ class dump_context:
 			return ''
 
 	def filename(self):
-		import filesystem
 		name = self.module + self.timestamp() + '.log'
 		try:
 			from xbmc import translatePath
@@ -100,7 +101,6 @@ class dump_context:
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		if exc_type:
-			import filesystem
 			with filesystem.fopen(self.filename(), 'w') as out:
 				import traceback
 				traceback.print_exception(exc_type, exc_val, exc_tb, limit=10, file=out)

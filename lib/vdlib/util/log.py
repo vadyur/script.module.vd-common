@@ -15,7 +15,7 @@ try:
 	import xbmcaddon
 	_addon = xbmcaddon.Addon('')
 	prefix = _addon.getAddonInfo('id')
-except ImportError:
+except (ImportError, RuntimeError) as e:
 	prefix = None
 
 import sys

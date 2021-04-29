@@ -160,8 +160,7 @@ def save_make_chdir(new_path):
 	finally:
 		return current
 
-
-from .log import dump_context
+dump_context = log.dump_context
 class save_make_chdir_context(dump_context):
 
 	def __init__(self, path, module='save_make_chdir_context', use_timestamp=True):

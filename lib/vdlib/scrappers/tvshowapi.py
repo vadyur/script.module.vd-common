@@ -1,4 +1,4 @@
-﻿from log import *
+﻿from ..util.log import *
 
 import json
 import re
@@ -294,7 +294,8 @@ class TheTVDBAPI(object):
 		try:
 			response1 = urlopen(self.__base_url + 'GetSeriesByRemoteID.php?imdbid=%s&language=%s' % (imdbId, self.__lang) )
 			try:
-				self.thetvdbid = re.search('<id>(\d+)</id>', response1.read()).group(1)
+				xml_data = decode_string(response1.read())
+				self.thetvdbid = re.search(r'<id>(\d+)</id>', xml_data).group(1)
 			except AttributeError:
 				return
 		except HTTPError as e:

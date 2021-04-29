@@ -382,7 +382,7 @@ class tmdb_movie_item(object):
 			'aired': 'release_date',
 			'plot': 'overview',
 			'title': 'name',
-			'originaltitle': 'originalname',
+			'originaltitle': 'original_name',
 		}
 
 		for tag in analogy:
@@ -391,7 +391,7 @@ class tmdb_movie_item(object):
 
 		if 'aired' in info:
 			aired = info['aired']
-			m = re.search('(\d\d\d\d)', aired)
+			m = re.search(r'(\d\d\d\d)', aired)
 			if m:
 				info['year'] = int(m.group(1))
 
@@ -406,6 +406,8 @@ class tmdb_movie_item(object):
 		for item in string_items:
 			if item in self.json_data_:
 				info[item] = self.json_data_[item]
+
+		
 
 		#  'credits',
 

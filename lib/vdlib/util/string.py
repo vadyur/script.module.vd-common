@@ -9,6 +9,8 @@ if sys.version_info >= (3, 0):
             return s.decode(codepage)
         return str(s)
 
+    def is_string_type(s):
+        return isinstance(s, str)
 else:
     uni_type = unicode
     def decode_string(s, codepage='utf-8'):
@@ -17,6 +19,8 @@ else:
         if isinstance(s, str):
             return s.decode(codepage)
         return unicode(s)
+    def is_string_type(s):
+        return isinstance(s, str) or isinstance(s, unicode)
 
 def colored(s, color):
     return '[COLOR={}]{}[/COLOR]'.format(color, s) 

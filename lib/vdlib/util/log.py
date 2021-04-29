@@ -1,15 +1,12 @@
+import inspect
+
 try:
 	from xbmc import log
 except:
 	def log(s):
+		from .string import decode_string
 		s = decode_string(s)
 		print(s)
-
-from .string import decode_string
-
-from . import filesystem
-
-import inspect
 
 try:
 	import xbmcaddon
@@ -66,6 +63,8 @@ def fprint_tb(filename):
 	exc_type, exc_val, exc_tb = sys.exc_info()
 	import traceback
 
+	from . import filesystem
+
 	with filesystem.fopen(filename, 'w') as out:
 		traceback.print_exception(exc_type, exc_val, exc_tb, limit=10, file=out)
 
@@ -83,6 +82,8 @@ class dump_context:
 			return ''
 
 	def filename(self):
+		from . import filesystem
+
 		name = self.module + self.timestamp() + '.log'
 		try:
 			from xbmc import translatePath
@@ -100,6 +101,7 @@ class dump_context:
 		return self
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
+		from . import filesystem
 		if exc_type:
 			with filesystem.fopen(self.filename(), 'w') as out:
 				import traceback

@@ -20,8 +20,10 @@ def get_tmdb_api_key():
 	from ..util import filesystem
 
 	try:
+		from ..kodi.compat import translatePath
+		from ..util.string import decode_string
 		import xbmc
-		home_path = xbmc.translatePath('special://home').decode('utf-8')
+		home_path = decode_string(translatePath('special://home'))
 		major = xbmc.getInfoLabel("System.BuildVersion").split(".")[0]
 
 		if int(major) > 17:
@@ -389,11 +391,13 @@ class tmdb_movie_item(object):
 			if analogy[tag] in self.json_data_:
 				info[tag] = self.json_data_[analogy[tag]]
 
-		if 'aired' in info:
-			aired = info['aired']
-			m = re.search(r'(\d\d\d\d)', aired)
-			if m:
-				info['year'] = int(m.group(1))
+		for tag in ['first_air_date', 'aired', 'release_date']:
+			if tag in self.json_data_:
+				aired = self.json_data_[tag]
+				m = re.search(r'(\d{4})', aired)
+				if m:
+					info['year'] = int(m.group(1))
+					break
 
 		try:
 			vid_item = self.json_data_['videos']['results'][0]

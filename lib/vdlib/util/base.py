@@ -72,10 +72,10 @@ stripPairs = (
 	('&ndash;', '-'),
 )
 
-def stripHtml(self, string):
+def stripHtml(string):
 	import re
 	# from xml.sax.saxutils import unescape
-	for (html, replacement) in self.stripPairs:
+	for (html, replacement) in stripPairs:
 		string = re.sub(html, replacement, string)
 
 	string = string.replace('&mdash;', u'—')

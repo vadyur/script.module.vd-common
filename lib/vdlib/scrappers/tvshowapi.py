@@ -49,7 +49,7 @@ def sortext(filelist):
 			result[ext] = result[ext] + 1
 		except:
 			result[ext] = 1
-	lol = result.iteritems()
+	lol = result.items()
 	lol = sorted(lol, key=lambda x: x[1])
 	debug('[sortext]: lol:' + str(lol))
 	popext = lol[-1][0]
@@ -85,7 +85,7 @@ def cutFileNames(l):
 	text2 = cutStr(text[1][0:len(text[1]) - 1 - len(text[1].split('.')[-1])])
 	sep_file = " "
 	result = list(d.compare(text1.split(sep_file), text2.split(sep_file)))
-	debug('[cutFileNames] ' + decode_string(result))
+	debug(u'[cutFileNames] ' + decode_string(result))
 
 	start = ''
 	end = ''
@@ -113,7 +113,7 @@ def cutFileNames(l):
 		except:
 			pass
 		l[fl] = indexes[i]
-	debug('[cutFileNames] [sorted l]  ' + decode_string(sorted(l, key=lambda x: x)))
+	debug(u'[cutFileNames] [sorted l]  ' + decode_string(sorted(l, key=lambda x: x)))
 	return l
 
 
@@ -124,7 +124,7 @@ def FileNamesPrepare(filename):
 	try:
 		if int(filename):
 			my_episode = int(filename)
-			debug('[FileNamesPrepare] ' + str([my_season, my_episode, filename]))
+			debug(u'[FileNamesPrepare] ' + str([my_season, my_episode, filename]))
 			return [my_season, my_episode, filename]
 	except:
 		pass

@@ -32,7 +32,7 @@ def need_create(settings):
 
 	return False
 
-def create_movies_and_tvshows(path):
+def create_movies_and_tvshows(path, scrapper='metadata.local', scrapper_tv='metadata.tvshows.themoviedb.org.python', suffix=''):
 	class Settings(object):
 		movies_save = True
 		tvshows_save = True
@@ -52,12 +52,9 @@ def create_movies_and_tvshows(path):
 		def tvshow_path(self):
 			return filesystem.join(self.base_path(), 'TVShows')
 
-	return create(Settings())
+	return create(Settings(), scrapper, scrapper_tv, suffix)
 
-def create(settings):
-	
-	#import vsdbg
-	#vsdbg._bp()
+def create(settings, scrapper='metadata.local', scrapper_tv='metadata.local', suffix=''):
 
 	need_restart = False
 	sources = Sources()
@@ -68,42 +65,42 @@ def create(settings):
 			path = settings.anime_tvshow_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Аниме', 'tvshows')
+			sources.add_video(path, u'Аниме', 'tvshows', scrapper_tv, suffix)
 			need_restart = True
 
 		if settings.animation_save:
 			path = settings.animation_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Мультфильмы', 'movies')
+			sources.add_video(path, u'Мультфильмы', 'movies', scrapper, suffix)
 			need_restart = True
 
 		if settings.animation_tvshows_save:
 			path = settings.animation_tvshow_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Мультсериалы', 'tvshows')
+			sources.add_video(path, u'Мультсериалы', 'tvshows', scrapper_tv, suffix)
 			need_restart = True
 
 		if settings.tvshows_save:
 			path = settings.tvshow_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Сериалы', 'tvshows')
+			sources.add_video(path, u'Сериалы', 'tvshows', scrapper_tv, suffix)
 			need_restart = True
 
 		if settings.documentary_save:
 			path = settings.documentary_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Документальное', 'movies')
+			sources.add_video(path, u'Документальное', 'movies', scrapper, suffix)
 			need_restart = True
 
 		if settings.movies_save:
 			path = settings.movies_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Фильмы', 'movies')
+			sources.add_video(path, u'Фильмы', 'movies', scrapper, suffix)
 			need_restart = True
 
 	return need_restart
@@ -204,7 +201,8 @@ class Sources(object):
 				return
 		raise UnknownMediaType(media_type=media_type)
 
-	def add_video(self, path, label, content):
+	def add_video(self, path, label, content, scrapper, suffix=''):
+		label = label + suffix
 		path = filesystem.join(path, '')
 		try:
 			self.add('video', path, label)
@@ -213,7 +211,7 @@ class Sources(object):
 
 		db = VideoDB()
 		scan_recursive = bool(content == 'movies')
-		db.update_path(path, content, scan_recursive, 0, 0)
+		db.update_path(path, content, scan_recursive, 0, 0, scrapper=scrapper)
 
 
 class VideoDB(VideoDatabase):
@@ -230,14 +228,14 @@ class VideoDB(VideoDatabase):
 	def path_exists(self, path):
 		return bool(self.get_path(path))
 
-	def update_path(self, path, content, scan_recursive=False, use_folder_names=False, no_update=False):
+	def update_path(self, path, content, scan_recursive=False, use_folder_names=False, no_update=False, scrapper = 'metadata.local'):
 		scan_recursive = 2147483647 if scan_recursive else 0
 		c = self.conn.cursor()
 		if self.path_exists(path):
 			c.execute(self.sql_request(
 				"UPDATE path SET strContent=?, strScraper=?, scanRecursive=?, "
 				"useFolderNames=?, strSettings=?, noUpdate=?, exclude=0 WHERE strPath=?"),
-				(content, 'metadata.local', scan_recursive, use_folder_names, '', no_update, path))
+				(content, scrapper, scan_recursive, use_folder_names, '', no_update, path))
 		else:
 			now_func = 'NOW()' if self.DB == 'mysql' else "DATETIME('now')"
 		
@@ -245,6 +243,6 @@ class VideoDB(VideoDatabase):
 				"INSERT INTO path (strPath, strContent, strScraper, scanRecursive, "
 				"useFolderNames, strSettings, noUpdate, exclude, dateAdded) "
 				"VALUES (?, ?, ?, ?, ?, ?, ?, 0, " + now_func + ")"),
-				(path, content, 'metadata.local', scan_recursive, use_folder_names, '', no_update))
+				(path, content, scrapper, scan_recursive, use_folder_names, '', no_update))
 
 		self.conn.commit()

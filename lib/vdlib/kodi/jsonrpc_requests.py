@@ -20,11 +20,11 @@ class JSONRPC_API(object):
 			}
 
 			if limits:
-				q['limits'] = limits
+				q['params']['limits'] = limits
 			if sort:
-				q['sort'] = sort
+				q['params']['sort'] = sort
 			if filter:
-				q['filter'] = filter
+				q['params']['filter'] = filter
 
 			try:
 				res = executeJSONRPC(q)
@@ -36,6 +36,7 @@ class JSONRPC_API(object):
 VideoLibrary	= JSONRPC_API('VideoLibrary')
 JSONRPC			= JSONRPC_API('JSONRPC')
 GUI				= JSONRPC_API('GUI')
+Files			= JSONRPC_API('Files')
 		
 def remove_movie_by_id(id):
 	r = VideoLibrary.RemoveMovie(movieid=id)
@@ -73,7 +74,9 @@ def get_tvshows(imdb_id):
 def update_episode(e, api_data):
 
 	"""
-	playcount, runtime, director, plot, rating, votes, lastplayed, writer,	firstaired, productioncode, season, episode, originaltitle, thumbnail,	fanart, art, resume, userrating, ratings, dateadded,
+	playcount, runtime, director, plot, rating, votes, lastplayed, writer,
+	firstaired, productioncode, season, episode, originaltitle, thumbnail,
+	fanart, art, resume, userrating, ratings, dateadded,
 	"""
 
 	params = {'episodeid': e['episodeid']}

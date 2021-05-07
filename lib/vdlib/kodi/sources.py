@@ -32,7 +32,7 @@ def need_create(settings):
 
 	return False
 
-def create_movies_and_tvshows(path, scrapper='metadata.local', scrapper_tv='metadata.tvshows.themoviedb.org.python', suffix=''):
+def create_movies_and_tvshows(path, scrapper='metadata.local', scrapper_tv='metadata.local', suffix=''):
 	class Settings(object):
 		movies_save = True
 		tvshows_save = True

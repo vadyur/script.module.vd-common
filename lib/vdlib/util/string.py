@@ -23,4 +23,7 @@ else:
         return isinstance(s, str) or isinstance(s, unicode)
 
 def colored(s, color):
-    return '[COLOR={}]{}[/COLOR]'.format(color, s) 
+    try:
+        return '[COLOR={}]{}[/COLOR]'.format(color, s)
+    except UnicodeEncodeError:
+        return u'[COLOR={}]{}[/COLOR]'.format(color, s)

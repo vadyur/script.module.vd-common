@@ -207,7 +207,10 @@ def fopen(path, mode):
 	try:
 		import xbmcvfs
 
-		from io import StringIO
+		try:
+			from StringIO import StringIO
+		except ImportError:
+			from io import StringIO
 		class File(StringIO):
 			def __enter__(self):
 				return self
@@ -247,7 +250,11 @@ def fopen(path, mode):
 				if not s: return
 
 				if not isinstance(s, str):
-					s = str(s)
+					import sys
+					if sys.version_info < (3, 0) and isinstance(s, unicode):
+						s = s.encode('utf-8')
+					else:
+						s = str(s)
 
 				StringIO.write(self, s)
 
@@ -270,6 +277,7 @@ def fopen(path, mode):
 			return File(path, mode)
 
 	except BaseException:
+		log.print_tb()
 		return open(get_path(path), mode)
 
 	

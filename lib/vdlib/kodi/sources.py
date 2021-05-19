@@ -8,6 +8,10 @@ from .compat import translatePath
 SOURCES_XML_PATH = 'special://userdata/sources.xml'
 SOURCES_REAL_PATH = translatePath(SOURCES_XML_PATH)
 
+scrapper_settings = {
+	'metadata.themoviedb.org': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="fanart">true</setting><setting id="landscape" default="true">false</setting><setting id="trailer">true</setting><setting id="language">ru</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="RatingS" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="certprefix" default="true">Rated </setting></settings>',
+	'metadata.tvshows.themoviedb.org': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="language" default="true">ru</setting><setting id="titleprefix" default="true">Episode </setting><setting id="titlesuffix" default="true" /><setting id="tmdbart">true</setting><setting id="fanarttvart">true</setting><setting id="tvdbwidebanners">true</setting><setting id="RatingS" default="true">Themoviedb</setting><setting id="fallback">true</setting><setting id="alsoimdb" default="true">false</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="certprefix" default="true" /></settings>',
+}
 
 def need_create(settings):
 	if not filesystem.exists(settings.base_path()):
@@ -33,28 +37,24 @@ def need_create(settings):
 	return False
 
 def create_movies_and_tvshows(path, scrapper='metadata.local', scrapper_tv='metadata.local', suffix=''):
-	class Settings(object):
-		movies_save = True
-		tvshows_save = True
+	sources = Sources()
 
-		anime_save = False
-		animation_save = False
-		animation_tvshows_save = False
+	def base_path():
+		return path
 
-		documentary_save = False
+	path = filesystem.join(base_path(), 'Movies')
+	if not filesystem.exists(path):
+		filesystem.makedirs(path)
+	sources.add_video(path, u'Фильмы', 'movies', scrapper, suffix)
+	
+	path = filesystem.join(base_path(), 'TVShows')
+	if not filesystem.exists(path):
+		filesystem.makedirs(path)
+	sources.add_video(path, u'Сериалы', 'tvshows', scrapper_tv, suffix)
 
-		def base_path(self):
-			return path
+	return True
 
-		def movies_path(self):
-			return filesystem.join(self.base_path(), 'Movies')
-
-		def tvshow_path(self):
-			return filesystem.join(self.base_path(), 'TVShows')
-
-	return create(Settings(), scrapper, scrapper_tv, suffix)
-
-def create(settings, scrapper='metadata.local', scrapper_tv='metadata.local', suffix=''):
+def create(settings, scrapper='metadata.local', scrapper_tv='metadata.local'):
 
 	need_restart = False
 	sources = Sources()
@@ -65,42 +65,42 @@ def create(settings, scrapper='metadata.local', scrapper_tv='metadata.local', su
 			path = settings.anime_tvshow_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Аниме', 'tvshows', scrapper_tv, suffix)
+			sources.add_video(path, u'Аниме', 'tvshows', scrapper_tv)
 			need_restart = True
 
 		if settings.animation_save:
 			path = settings.animation_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Мультфильмы', 'movies', scrapper, suffix)
+			sources.add_video(path, u'Мультфильмы', 'movies', scrapper)
 			need_restart = True
 
 		if settings.animation_tvshows_save:
 			path = settings.animation_tvshow_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Мультсериалы', 'tvshows', scrapper_tv, suffix)
+			sources.add_video(path, u'Мультсериалы', 'tvshows', scrapper_tv)
 			need_restart = True
 
 		if settings.tvshows_save:
 			path = settings.tvshow_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Сериалы', 'tvshows', scrapper_tv, suffix)
+			sources.add_video(path, u'Сериалы', 'tvshows', scrapper_tv)
 			need_restart = True
 
 		if settings.documentary_save:
 			path = settings.documentary_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Документальное', 'movies', scrapper, suffix)
+			sources.add_video(path, u'Документальное', 'movies', scrapper)
 			need_restart = True
 
 		if settings.movies_save:
 			path = settings.movies_path()
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)
-			sources.add_video(path, u'Фильмы', 'movies', scrapper, suffix)
+			sources.add_video(path, u'Фильмы', 'movies', scrapper)
 			need_restart = True
 
 	return need_restart
@@ -228,14 +228,21 @@ class VideoDB(VideoDatabase):
 	def path_exists(self, path):
 		return bool(self.get_path(path))
 
-	def update_path(self, path, content, scan_recursive=False, use_folder_names=False, no_update=False, scrapper = 'metadata.local'):
+	def update_path(self, path, content, 
+					scan_recursive=False, 
+					use_folder_names=False, 
+					no_update=False, 
+					scrapper = 'metadata.local'):
 		scan_recursive = 2147483647 if scan_recursive else 0
+
+		str_settings=scrapper_settings.get(scrapper, '')
+
 		c = self.conn.cursor()
 		if self.path_exists(path):
 			c.execute(self.sql_request(
 				"UPDATE path SET strContent=?, strScraper=?, scanRecursive=?, "
 				"useFolderNames=?, strSettings=?, noUpdate=?, exclude=0 WHERE strPath=?"),
-				(content, scrapper, scan_recursive, use_folder_names, '', no_update, path))
+				(content, scrapper, scan_recursive, use_folder_names, str_settings, no_update, path))
 		else:
 			now_func = 'NOW()' if self.DB == 'mysql' else "DATETIME('now')"
 		
@@ -243,6 +250,6 @@ class VideoDB(VideoDatabase):
 				"INSERT INTO path (strPath, strContent, strScraper, scanRecursive, "
 				"useFolderNames, strSettings, noUpdate, exclude, dateAdded) "
 				"VALUES (?, ?, ?, ?, ?, ?, ?, 0, " + now_func + ")"),
-				(path, content, scrapper, scan_recursive, use_folder_names, '', no_update))
+				(path, content, scrapper, scan_recursive, use_folder_names, str_settings, no_update))
 
 		self.conn.commit()

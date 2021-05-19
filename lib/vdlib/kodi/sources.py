@@ -42,15 +42,15 @@ def create_movies_and_tvshows(path, scrapper='metadata.local', scrapper_tv='meta
 	def base_path():
 		return path
 
-	path = filesystem.join(base_path(), 'Movies')
-	if not filesystem.exists(path):
-		filesystem.makedirs(path)
-	sources.add_video(path, u'Фильмы', 'movies', scrapper, suffix)
+	path1 = filesystem.join(base_path(), 'Movies')
+	if not filesystem.exists(path1):
+		filesystem.makedirs(path1)
+	sources.add_video(path1, u'Фильмы', 'movies', scrapper, suffix)
 	
-	path = filesystem.join(base_path(), 'TVShows')
-	if not filesystem.exists(path):
-		filesystem.makedirs(path)
-	sources.add_video(path, u'Сериалы', 'tvshows', scrapper_tv, suffix)
+	path2 = filesystem.join(base_path(), 'TVShows')
+	if not filesystem.exists(path2):
+		filesystem.makedirs(path2)
+	sources.add_video(path2, u'Сериалы', 'tvshows', scrapper_tv, suffix)
 
 	return True
 

@@ -249,8 +249,8 @@ class world_art(world_art_soup):
 	Request_URL = "http://www.world-art.ru/search.php?public_search=%s&global_sector=cinema"
 
 	def __init__(self, title, year=None, imdbid=None, kp_url=None):
-		import urllib
-		url = self.Request_URL % urllib.quote_plus(title.encode('cp1251'))
+		from ..util import quote_plus
+		url = self.Request_URL % quote_plus(title.encode('cp1251'))
 		world_art_soup.__init__(self, url)
 
 		self._title = title
@@ -494,8 +494,9 @@ class KinopoiskAPI(object):
 		return r
 
 	def get_google_cache(self, url):
-		import urllib
-		search_url = "http://www.google.com/search?q=" + urllib.quote_plus(url)
+		from ..util import quote_plus
+
+		search_url = "http://www.google.com/search?q=" + quote_plus(url)
 		headers = {'user-agent': user_agent}
 
 		r = self.session.get(search_url, headers=headers, timeout=2.0)

@@ -5,8 +5,17 @@ import os, sys
 from .string import decode_string
 from . import log
 try:
-	import xbmc, xbmcvfs
-except ImportError: pass
+	import xbmcvfs
+except ImportError: 
+	pass
+
+try:
+	from ..kodi.compat import translatePath
+except ImportError:
+	def translatePath(path):
+		return path
+
+real_path = translatePath	#	Monkey path for debugging
 
 __DEBUG__ = False
 
@@ -75,10 +84,9 @@ def _get_path(path, use_unc_path=True):
 def get_path(path):
 	return test_path(_get_path(path))
 
-
 def xbmcvfs_path(path):
 	if sys.version_info >= (3, 0):
-		return xbmcvfs.translatePath( decode_string(path) )
+		return translatePath( decode_string(path) )
 	else:
 		if isinstance(path, unicode):
 			u8path = path.encode('utf-8')
@@ -86,21 +94,24 @@ def xbmcvfs_path(path):
 			u8path = path
 
 		if _is_abs_path(path):
-			return xbmc.translatePath(u8path)
+			return translatePath(u8path)
 		else:
-			return xbmc.translatePath(os.path.join(_cwd.encode('utf-8'), u8path))
+			return translatePath(os.path.join(_cwd.encode('utf-8'), u8path))
 
 def exists(path):
 	def xbmcvfs_exists(path):
-		import stat
-		if stat.S_ISDIR(xbmcvfs.Stat(xbmcvfs_path(path)).st_mode()):
-			return True
-		return xbmcvfs.exists(xbmcvfs_path(path))
+		try:
+			import stat
+			if stat.S_ISDIR(xbmcvfs.Stat(xbmcvfs_path(path)).st_mode()):
+				return True
+			return xbmcvfs.exists(xbmcvfs_path(path))
+		except NameError:
+			return os_path_exists(translatePath(path))
 
 	def os_path_exists(path):
 		if path.startswith('smb://') and os.name == 'nt':
 			path = path.replace('smb://', r'\\').replace('/', '\\')
-		return os.path.exists(get_path(path))
+		return os.path.exists(real_path(path))
 
 	try:
 		if path.startswith('smb://') and os.name == 'nt':
@@ -128,7 +139,7 @@ def makedirs(path):
 	try:
 		return xbmcvfs.mkdirs(xbmcvfs_path(path))
 	except (ImportError, NameError):
-		os.makedirs(get_path(path))
+		os.makedirs(real_path(path))
 
 
 def chdir(path):
@@ -144,7 +155,7 @@ def chdir(path):
 	except: pass
 
 	try:
-		os.chdir(get_path(path))
+		os.chdir(real_path(path))
 	except: pass
 
 
@@ -186,7 +197,7 @@ def isfile(path):
 		import stat
 		return stat.S_ISREG(xbmcvfs.Stat(xbmcvfs_path(path)).st_mode())
 	except (ImportError, NameError):
-		return os.path.isfile(get_path(path))
+		return os.path.isfile(real_path(path))
 
 
 def abspath(path):
@@ -208,7 +219,7 @@ def fopen(path, mode):
 		import xbmcvfs
 
 		try:
-			from StringIO import StringIO
+			from StringIO import StringIO	# type: ignore
 		except ImportError:
 			from io import StringIO
 		class File(StringIO):
@@ -251,7 +262,7 @@ def fopen(path, mode):
 
 				if not isinstance(s, str):
 					import sys
-					if sys.version_info < (3, 0) and isinstance(s, unicode):
+					if sys.version_info < (3, 0) and isinstance(s, unicode):	# type: ignore
 						s = s.encode('utf-8')
 					else:
 						s = str(s)
@@ -277,8 +288,7 @@ def fopen(path, mode):
 			return File(path, mode)
 
 	except BaseException:
-		log.print_tb()
-		return open(get_path(path), mode)
+		return open(real_path(path), mode)
 
 	
 def join(path, *paths):
@@ -317,7 +327,7 @@ def remove(path):
 	try:
 		xbmcvfs.delete(xbmcvfs_path(path))
 	except:
-		os.remove(get_path(path))
+		os.remove(real_path(path))
 
 
 def copyfile(src, dst):
@@ -325,7 +335,7 @@ def copyfile(src, dst):
 		xbmcvfs.copy(xbmcvfs_path(src), xbmcvfs_path(dst))
 	except:
 		import shutil
-		shutil.copyfile(get_path(src), get_path(dst))
+		shutil.copyfile(real_path(src), real_path(dst))
 
 
 def movefile(src, dst):
@@ -333,7 +343,7 @@ def movefile(src, dst):
 		xbmcvfs.rename(xbmcvfs_path(src), xbmcvfs_path(dst))
 	except:
 		import shutil
-		shutil.move(get_path(src), get_path(dst))
+		shutil.move(real_path(src), real_path(dst))
 
 
 def getmtime(path):
@@ -341,7 +351,7 @@ def getmtime(path):
 		import stat
 		return xbmcvfs.Stat(xbmcvfs_path(path)).st_mtime()
 	except (ImportError, NameError):
-		return os.path.getmtime(get_path(path))
+		return os.path.getmtime(real_path(path))
 
 
 def getctime(path):
@@ -349,7 +359,7 @@ def getctime(path):
 		import stat
 		return xbmcvfs.Stat(xbmcvfs_path(path)).st_ctime()
 	except (ImportError, NameError):
-		return os.path.getctime(get_path(path))
+		return os.path.getctime(real_path(path))
 
 
 def dirname(path):

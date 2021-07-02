@@ -1,5 +1,4 @@
-import sys
-if sys.version_info >= (3, 0):
+try:
     from xbmcvfs import translatePath, makeLegalFilename, validatePath
-else:
+except ImportError:
     from xbmc import translatePath, makeLegalFilename, validatePath

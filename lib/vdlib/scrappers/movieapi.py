@@ -384,7 +384,7 @@ class tmdb_movie_item(object):
 			'aired': 'release_date',
 			'plot': 'overview',
 			'title': 'name',
-			'originaltitle': 'original_name',
+			'originaltitle': 'original_title',
 		}
 
 		for tag in analogy:

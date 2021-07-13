@@ -380,16 +380,17 @@ class tmdb_movie_item(object):
 		if 'genres' in self.json_data_:
 			info['genre'] = u', '.join([i['name'] for i in self.json_data_['genres']])
 
-		analogy = {
-			'aired': 'release_date',
-			'plot': 'overview',
-			'title': 'name',
-			'originaltitle': 'original_name',
-		}
+		analogy = [
+			('aired', 'release_date'),
+			('plot', 'overview'),
+			('title', 'name'),
+			('originaltitle', 'original_title'),
+			('originaltitle', 'original_name'),
+		]
 
-		for tag in analogy:
-			if analogy[tag] in self.json_data_:
-				info[tag] = self.json_data_[analogy[tag]]
+		for xbmc_tag, tmdb_tag in analogy:
+			if tmdb_tag in self.json_data_:
+				info[xbmc_tag] = self.json_data_[tmdb_tag]
 
 		for tag in ['first_air_date', 'aired', 'release_date']:
 			if tag in self.json_data_:

@@ -395,10 +395,11 @@ class tmdb_movie_item(object):
 		for tag in ['first_air_date', 'aired', 'release_date']:
 			if tag in self.json_data_:
 				aired = self.json_data_[tag]
-				m = re.search(r'(\d{4})', aired)
-				if m:
-					info['year'] = int(m.group(1))
-					break
+				if aired:
+					m = re.search(r'(\d{4})', aired)
+					if m:
+						info['year'] = int(m.group(1))
+						break
 
 		try:
 			vid_item = self.json_data_['videos']['results'][0]

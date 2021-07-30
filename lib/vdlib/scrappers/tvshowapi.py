@@ -498,7 +498,7 @@ class MyShowsAPI(object):
 	def getEpisode(self, season, episode):
 		res = {}
 		if self.valid_ep():
-			for episode_data in self.myshows_ep['episodes']:
+			for episode_data in self.myshows_ep.get('episodes', []):
 				ep = self.myshows_ep['episodes'][episode_data]
 				if ep['seasonNumber'] != season or ep['episodeNumber'] != episode:
 					continue

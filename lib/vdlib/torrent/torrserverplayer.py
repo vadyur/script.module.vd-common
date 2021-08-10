@@ -62,7 +62,7 @@ class TorrServerPlayer(TorrentPlayer):
 		from ..util.log import debug
 		s = torrserve_stream.Settings()
 
-		self.engine = torrserve_stream.Engine(path=path, log=debug, host=s.host, port=s.port)
+		self.engine = torrserve_stream.Engine(path=path, log=debug, host=s.host, port=s.port, auth=s.auth)
 		
 		
 	def updateCheckingProgress(self, progressBar):

@@ -707,7 +707,8 @@ class ImdbAPI(object):
 	def year(self):
 		a = self.page.find('a', href=re.compile(r'releaseinfo\?ref_=tt_ov_rdat'))
 		if a:
-			return a.get_text()
+			result = a.get_text()
+			return result[:4]
 		else:
 			raise AttributeError
 

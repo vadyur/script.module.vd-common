@@ -695,70 +695,63 @@ class imdb_cast(soup_base):
 
 
 class ImdbAPI(object):
-	def __init__(self, imdb_id):
-		headers = { 'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7' }
+	headers = { 'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7' }
 
-		resp = requests.get('http://www.imdb.com/title/' + imdb_id + '/', headers=headers)
+	def __init__(self, imdb_id):
+
+		resp = requests.get('http://www.imdb.com/title/' + imdb_id + '/', headers=self.headers)
 		if resp.status_code == requests.codes.ok:
 			text = clean_html(resp.content)
 			self.page = BeautifulSoup(text, 'html.parser')
 
 	def year(self):
-		a = self.page.select_one('#titleYear > a')
+		a = self.page.find('a', href=re.compile(r'releaseinfo\?ref_=tt_ov_rdat'))
 		if a:
 			return a.get_text()
 		else:
 			raise AttributeError
 
 	def rating(self):
-		span = self.page.find('span', attrs={'itemprop':'ratingValue'})
+		span = self.page.find('span', class_=re.compile(r'AggregateRatingButton__RatingScore'))
 		if span:
 			return span.get_text().replace(',', '.')
 		else:
 			raise AttributeError
 
 	def runtime(self):
-		t = self.page.find('time', attrs={'itemprop':'duration'})
-		if t:
-			return t['datetime'].replace('PT', '').replace('M', '')
-		else:
-			raise AttributeError
+		div = self.page.find('div', class_=re.compile(r'TitleBlock__TitleMetaDataContainer'))
+		for li in div.find_all('li'):
+			if re.match(r'\d+(h|min)', li.get_text()):
+				return li.get_text()
+		raise AttributeError
 
 	def mpaa(self):
-		rt = self.page.find('meta', attrs={'itemprop':'contentRating'})
-		if rt:
-			return 'Rated ' + rt['content']
+		pattern = r"/title/tt\d+/parentalguide/certificates"
+		a = self.page.find('a', href=re.compile(pattern))
+		if a:
+			return a.get_text()
 		else:
 			raise AttributeError
 
 	def title(self):
 		from ..util.string import uni_type
-		# <h1 itemprop="name" class="">
-		h1 = self.page.find('h1', attrs={'itemprop':'name'})
+		h1 = self.page.find('h1', class_=re.compile(r'TitleHeader__TitleText'))
 		if h1:
 			return uni_type( h1.contents[0] ).replace(u'\xa0', u' ').strip()
 		else:
 			raise AttributeError
 
 	def originaltitle(self):
-		import re
-
-		meta = self.page.find('meta', attrs={'property': 'og:title'})
-		if meta:
-			otitle = meta['content']
-			otitle = re.sub(r'\(\d+\)', '', otitle)
-			otitle = otitle.split('(TV')[0]
-			return otitle.strip()
-
-		raise AttributeError
+		from ..util.string import uni_type
+		div = self.page.find('div', class_=re.compile(r'OriginalTitle__OriginalTitleText'))
+		if div:
+			return uni_type( div.contents[0] ).replace(u'\xa0', u' ').strip().replace('Original title: ', '')
+		else:
+			raise AttributeError
 
 	def type(self):
-		# <div class="bp_heading">Episode Guide</div>
-		for div in self.page.find_all('div', class_="bp_heading"):
-			if div.get_text() == 'Episode Guide':
-				return 'tvshow'
-
-		return 'movie'
+		a = self.page.find('a', href=re.compile(r'/title/tt\d+/episodes'))
+		return 'tvshow' if a else 'movie'
 
 
 class KinopoiskAPI2(KinopoiskAPI):

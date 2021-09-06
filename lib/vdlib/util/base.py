@@ -3,6 +3,7 @@ KB = 1024
 MB = KB * KB
 GB = KB * MB
 
+from sys import version_info
 from . import filesystem
 
 def make_fullpath(title, ext):
@@ -25,14 +26,22 @@ def make_fullpath(title, ext):
 
 def remove_script_tags(file):
 	import re
-	pattern = re.compile(r'<script[\s\S]+?/script>')
+	pattern = r'<script[\s\S]+?/script>'
 	subst = ""
-	return re.sub(pattern, subst, file)
+	if version_info >= (3, 0) and isinstance(file, bytes):
+		pattern = pattern.encode('utf-8')
+		subst = b""
+
+	c_pattern = re.compile(pattern)
+	return re.sub(c_pattern, subst, file)
 
 def clean_html(page):
 	page = remove_script_tags(page)
 
-	return page.replace("</sc'+'ript>", "").replace('</bo"+"dy>', '').replace('</ht"+"ml>', '')
+	if version_info >= (3, 0) and isinstance(page, bytes):
+		return page.replace(b"</sc'+'ript>", b"").replace(b'</bo"+"dy>', b'').replace(b'</ht"+"ml>', b'')
+	else:
+		return page.replace("</sc'+'ript>", "").replace('</bo"+"dy>', '').replace('</ht"+"ml>', '')
 
 def striphtml(data):
 	import re

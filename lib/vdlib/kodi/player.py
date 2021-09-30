@@ -1,7 +1,8 @@
 # coding: utf-8
 
 from ..util.string import decode_string
-from ..torrent import torrent2httpplayer, aceplayer, yatpplayer, torrserverplayer
+from ..torrent import torrent2httpplayer, torrserverplayer
+# from ..torrent import aceplayer, yatpplayer, 
 import time, sys
 import xbmc, xbmcgui, xbmcplugin
 from ..util.log import debug
@@ -44,12 +45,12 @@ def play_torrent(path, settings, info_dialog, title_dialog):
 
 		if torrent_player == 'torrent2http':
 			player = torrent2httpplayer.Torrent2HTTPPlayer(settings)
-		elif torrent_player == 'YATP':
-			player = yatpplayer.YATPPlayer()
-		elif torrent_player == 'Ace Stream':
-			player = aceplayer.AcePlayer(settings)
 		elif torrent_player == 'TorrServer':
 			player = torrserverplayer.TorrServerPlayer(settings)
+#		elif torrent_player == 'YATP':
+#			player = yatpplayer.YATPPlayer()
+#		elif torrent_player == 'Ace Stream':
+#			player = aceplayer.AcePlayer(settings)
 
 		if not player:
 			return

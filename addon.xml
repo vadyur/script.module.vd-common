@@ -3,8 +3,8 @@
     <requires>
       <import addon="xbmc.python" version="3.0.0"/>
       <import addon="script.module.requests"/>
-      <import addon="script.module.torrent.ts" optional="true"/>
-      <import addon="plugin.video.yatp" optional="true"/>
+      <!-- <import addon="script.module.torrent.ts" optional="true"/> -->
+      <!-- <import addon="plugin.video.yatp" optional="true"/> -->
       <import addon="script.module.torrent2http" optional="false"/>
       <import addon="script.module.torrserver" optional="false"/>
       <import addon="script.module.beautifulsoup4"/>

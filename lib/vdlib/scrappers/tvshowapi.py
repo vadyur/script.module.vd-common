@@ -236,6 +236,9 @@ def parse_torrent(info, season=None):
 				name = item[2]
 				index = item[3]
 
+				if season is None:
+					season = 1
+
 				files.append({'name': name, 'season': season, 'episode': item[1], 'index': index})
 				season = save_season
 			else:

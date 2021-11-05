@@ -93,6 +93,9 @@ def cutFileNames(l):
 	for res in result:
 		if str(res).startswith('-') or str(res).startswith('+') or str(res).startswith('.?'):
 			break
+		if re.search(r'[Ss]\d{1,3}', str(res)):
+			break
+
 		start = start + str(res).strip() + sep_file
 	result.reverse()
 	for res in result:

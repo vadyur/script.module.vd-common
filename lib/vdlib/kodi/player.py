@@ -34,7 +34,7 @@ class OurDialogProgress(xbmcgui.DialogProgress):
 def _log(s):
 	debug(u'vdlib.kodi.player: {}'.format(decode_string(s)))
 
-def play_torrent(path, settings, info_dialog, title_dialog):
+def play_torrent(path, settings, info_dialog, title_dialog, video_info=None, art=None):
 	player = None
 	
 	try:
@@ -88,6 +88,18 @@ def play_torrent(path, settings, info_dialog, title_dialog):
 
 		handle = int(sys.argv[1])
 		list_item = xbmcgui.ListItem(path=playable_url)
+
+		if video_info:
+			if isinstance(video_info, dict):
+				list_item.setInfo('video', video_info)
+			elif callable(video_info):
+				list_item.setArt(video_info())
+
+		if art:
+			if isinstance(art, dict):
+				list_item.setArt(art)
+			elif callable(art):
+				list_item.setArt(art())
 
 		xbmc_player = xbmc.Player()
 		xbmcplugin.setResolvedUrl(handle, True, list_item)

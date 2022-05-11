@@ -11,1291 +11,1485 @@ import requests
 from bs4 import BeautifulSoup
 from ..util.base import clean_html
 
-user_agent = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.100'
+user_agent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.100"
+
 
 def get_tmdb_api_key():
-	key = 'f090bb54758cabf231fb605d3e3e0468'
-	host = 'api.themoviedb.org'
+    key = "f090bb54758cabf231fb605d3e3e0468"
+    host = "api.themoviedb.org"
 
-	from ..util import filesystem
+    from ..util import filesystem
 
-	try:
-		from ..kodi.compat import translatePath
-		from ..util.string import decode_string
-		import xbmc
-		home_path = decode_string(translatePath('special://home'))
-		major = xbmc.getInfoLabel("System.BuildVersion").split(".")[0]
+    try:
+        from ..kodi.compat import translatePath
+        from ..util.string import decode_string
+        import xbmc
 
-		if int(major) > 17:
-			return {'host': host, 'key': key }
+        home_path = decode_string(translatePath("special://home"))
+        major = xbmc.getInfoLabel("System.BuildVersion").split(".")[0]
 
-	except ImportError:
-		# cur = filesystem.dirname(__file__)
-		# home_path = filesystem.join(cur, '../..')
+        if int(major) > 17:
+            return {"host": host, "key": key}
 
-		return {'host': host, 'key': key }
+    except ImportError:
+        # cur = filesystem.dirname(__file__)
+        # home_path = filesystem.join(cur, '../..')
 
-	try:
-		xml_path = filesystem.join(home_path, 'addons', 'metadata.common.themoviedb.org', 'tmdb.xml')
-		with filesystem.fopen(xml_path, 'r') as xml:
-			content = xml.read()
-			match = re.search(r'api_key=(\w+)', content)
-			if match:
-				key = match.group(1)
-				debug('get_tmdb_api_key: ok')
-			
-			m = re.search(r'://(.+)/3/', content)
-			if m:
-				host = m.group(1)
-	
-	except BaseException as e:
-		debug('get_tmdb_api_key: ' + str(e))
+        return {"host": host, "key": key}
 
-	return {'host': host, 'key': key }
+    try:
+        xml_path = filesystem.join(
+            home_path, "addons", "metadata.common.themoviedb.org", "tmdb.xml"
+        )
+        with filesystem.fopen(xml_path, "r") as xml:
+            content = xml.read()
+            match = re.search(r"api_key=(\w+)", content)
+            if match:
+                key = match.group(1)
+                debug("get_tmdb_api_key: ok")
+
+            m = re.search(r"://(.+)/3/", content)
+            if m:
+                host = m.group(1)
+
+    except BaseException as e:
+        debug("get_tmdb_api_key: " + str(e))
+
+    return {"host": host, "key": key}
+
 
 def attr_text(s):
-	return s.get_text()
+    return s.get_text()
+
 
 def attr_split_slash(s):
-	itms = s.get_text().split('/')
-	return [i.strip() for i in itms]
+    itms = s.get_text().split("/")
+    return [i.strip() for i in itms]
+
 
 def attr_year(s):
-	import re
-	m = re.search(r'(\d\d\d\d)', s.get_text())
-	if m:
-		return m.group(1)
+    import re
+
+    m = re.search(r"(\d\d\d\d)", s.get_text())
+    if m:
+        return m.group(1)
+
 
 def attr_genre(s):
-	return [ a.get_text() for a in s.find_all('a') ]
+    return [a.get_text() for a in s.find_all("a")]
+
 
 class IDs(object):
-	kp_by_imdb = {}
-	imdb_by_kp = {}
+    kp_by_imdb = {}
+    imdb_by_kp = {}
 
-	@staticmethod
-	def id_by_kp_url(url):
-		import re
-		m = re.search(r"(\d\d+)", url)
-		if m:
-			return m.group(1)
-		
-		return None
+    @staticmethod
+    def id_by_kp_url(url):
+        import re
 
-	@staticmethod
-	def get_by_kp(kp_url):
-		return IDs.imdb_by_kp.get(IDs.id_by_kp_url(kp_url))
+        m = re.search(r"(\d\d+)", url)
+        if m:
+            return m.group(1)
 
-	@staticmethod
-	def get_by_imdb(imdb_id):
-		return IDs.kp_by_imdb.get(imdb_id)
+        return None
 
-	@staticmethod
-	def set(imdb_id, kp_url):
-		if imdb_id and kp_url:
-			kp_id = IDs.id_by_kp_url(kp_url)
-			IDs.imdb_by_kp[kp_id] = imdb_id
-			IDs.kp_by_imdb[imdb_id] = kp_id
+    @staticmethod
+    def get_by_kp(kp_url):
+        return IDs.imdb_by_kp.get(IDs.id_by_kp_url(kp_url))
 
-	@staticmethod
-	def has_imdb(imdb_id):
-		return imdb_id in IDs.kp_by_imdb
+    @staticmethod
+    def get_by_imdb(imdb_id):
+        return IDs.kp_by_imdb.get(imdb_id)
 
-	@staticmethod
-	def has_kp(kp_url):
-		kp_id = IDs.id_by_kp_url(kp_url)
-		return kp_id in IDs.imdb_by_kp
+    @staticmethod
+    def set(imdb_id, kp_url):
+        if imdb_id and kp_url:
+            kp_id = IDs.id_by_kp_url(kp_url)
+            IDs.imdb_by_kp[kp_id] = imdb_id
+            IDs.kp_by_imdb[imdb_id] = kp_id
+
+    @staticmethod
+    def has_imdb(imdb_id):
+        return imdb_id in IDs.kp_by_imdb
+
+    @staticmethod
+    def has_kp(kp_url):
+        kp_id = IDs.id_by_kp_url(kp_url)
+        return kp_id in IDs.imdb_by_kp
+
 
 from ..base.soup_base import soup_base
 
-class world_art_soup(soup_base):
-	headers = {
-		'Host': 						'www.world-art.ru',
-		'Upgrade-Insecure-Requests': 	'1',
-		'User-Agent':					user_agent,
-		'X-Compress': 					'null',
-	}
 
-	def __init__(self, url):
-		soup_base.__init__(self, url, self.headers)
+class world_art_soup(soup_base):
+    headers = {
+        "Host": "www.world-art.ru",
+        "Upgrade-Insecure-Requests": "1",
+        "User-Agent": user_agent,
+        "X-Compress": "null",
+    }
+
+    def __init__(self, url):
+        soup_base.__init__(self, url, self.headers)
+
 
 class world_art_actors(world_art_soup):
-	def __init__(self, url):
-		world_art_soup.__init__(self, url)
-		self._actors = []
+    def __init__(self, url):
+        world_art_soup.__init__(self, url)
+        self._actors = []
 
-	@property
-	def actors(self):
-		if not self._actors:
-			def append_actor(tr):
+    @property
+    def actors(self):
+        if not self._actors:
 
-				tds = tr.find_all('td', recursive=False)
+            def append_actor(tr):
 
-				a = tds[1].find('a')
-				act = {}
-				if a:
-					id = a['href'].split('?id=')[-1]
-					id = id.split('&')[0]
-					#if td.find('img', attrs={'src': "../img/photo.gif"}):
-					#	act['photo'] = 'http://www.world-art.ru/img/people/10000/{}.jpg'.format(int(id))
+                tds = tr.find_all("td", recursive=False)
 
-					act['ru_name'] = tds[1].get_text()
-					act['en_name'] = tds[2].get_text()
-					act['role'] = tds[3].get_text()
+                a = tds[1].find("a")
+                act = {}
+                if a:
+                    id = a["href"].split("?id=")[-1]
+                    id = id.split("&")[0]
+                    # if td.find('img', attrs={'src': "../img/photo.gif"}):
+                    # 	act['photo'] = 'http://www.world-art.ru/img/people/10000/{}.jpg'.format(int(id))
 
-					#act = { k:v for k, v in act.iteritems() if v }		## No python 2.6 compatible
-					res = {}
-					for k, v in act.iteritems():
-						if v:
-							res[k] = v
+                    act["ru_name"] = tds[1].get_text()
+                    act["en_name"] = tds[2].get_text()
+                    act["role"] = tds[3].get_text()
 
-					self._actors.append(res)
+                    # act = { k:v for k, v in act.iteritems() if v }		## No python 2.6 compatible
+                    res = {}
+                    for k, v in act.iteritems():
+                        if v:
+                            res[k] = v
 
-			for b in self.soup.find_all('b'):
-				if b.get_text() == u'Актёры':
-					table = b.find_parent('table')
-					table = table.find_next_siblings('table')[1]
-					for tr_next in table.find_all('tr'):
-						append_actor(tr_next)
+                    self._actors.append(res)
 
-					'''
+            for b in self.soup.find_all("b"):
+                if b.get_text() == "Актёры":
+                    table = b.find_parent("table")
+                    table = table.find_next_siblings("table")[1]
+                    for tr_next in table.find_all("tr"):
+                        append_actor(tr_next)
+
+                    """
 					tr = b.find_parent('tr')
 					if tr:
 						for tr_next in tr.find_next_siblings('tr'):
 							append_actor(tr_next)
-					'''
+					"""
 
-		return self._actors
+        return self._actors
 
-	def __getitem__(self, i):
-		from ..util.string import is_string_type
-		if isinstance(i, int):
-			return self.actors[i]
-		elif is_string_type(i):
-			for act in self.actors:
-				if act['ru_name'] == i:
-					return act
-				if act['en_name'] == i:
-					return act
-		raise KeyError
+    def __getitem__(self, i):
+        from ..util.string import is_string_type
+
+        if isinstance(i, int):
+            return self.actors[i]
+        elif is_string_type(i):
+            for act in self.actors:
+                if act["ru_name"] == i:
+                    return act
+                if act["en_name"] == i:
+                    return act
+        raise KeyError
+
 
 class world_art_info(world_art_soup):
-	Request_URL = "http://www.world-art.ru/%s"
+    Request_URL = "http://www.world-art.ru/%s"
 
-	attrs = [
-		(u'Названия', 'knowns', attr_split_slash),
-		(u'Производство', 'country', attr_text),
-		(u'Хронометраж', 'runtime', attr_text),
-		(u'Жанр', 'genre', attr_genre),
-		(u'Первый показ', 'year', attr_year),
-		(u'Режиссёр', 'director', attr_text),
-	]
+    attrs = [
+        ("Названия", "knowns", attr_split_slash),
+        ("Производство", "country", attr_text),
+        ("Хронометраж", "runtime", attr_text),
+        ("Жанр", "genre", attr_genre),
+        ("Первый показ", "year", attr_year),
+        ("Режиссёр", "director", attr_text),
+    ]
 
-	def __init__(self, url):
-		world_art_soup.__init__(self, self.Request_URL % url)
-		self._info_data = dict()
-		self._actors = None
+    def __init__(self, url):
+        world_art_soup.__init__(self, self.Request_URL % url)
+        self._info_data = dict()
+        self._actors = None
 
-	@property
-	def actors(self):
-		if not self._actors:
-			self._actors = world_art_actors(self.url.replace('cinema.php', 'cinema_full_cast.php'))
-		return self._actors.actors
+    @property
+    def actors(self):
+        if not self._actors:
+            self._actors = world_art_actors(
+                self.url.replace("cinema.php", "cinema_full_cast.php")
+            )
+        return self._actors.actors
 
-	@property
-	def data(self):
-		def next_td(td, fn):
-			return fn(td.next_sibling.next_sibling)
+    @property
+    def data(self):
+        def next_td(td, fn):
+            return fn(td.next_sibling.next_sibling)
 
-		if not self._info_data:
-			data = {}
-			for td in self.soup.find_all('td', class_='review'):
-				td_text = td.get_text()
-				find = [item for item in self.attrs if td_text in item]
-				if find:
-					item = find[0]
-					data[item[1]] = next_td(td, item[2])
-			self._info_data = data.copy()
+        if not self._info_data:
+            data = {}
+            for td in self.soup.find_all("td", class_="review"):
+                td_text = td.get_text()
+                find = [item for item in self.attrs if td_text in item]
+                if find:
+                    item = find[0]
+                    data[item[1]] = next_td(td, item[2])
+            self._info_data = data.copy()
 
-		return self._info_data
+        return self._info_data
 
-	def __getattr__(self, name):
-		names = [i[1] for i in self.attrs]
+    def __getattr__(self, name):
+        names = [i[1] for i in self.attrs]
 
-		if name in names:
-			return self.data[name]
-		raise AttributeError
+        if name in names:
+            return self.data[name]
+        raise AttributeError
 
-	@property
-	def imdb(self):
-		a = self.soup.select('a[href*=imdb.com]')
-		if a:
-			for part in a[0]['href'].split('/'):
-				if part.startswith('tt'):
-					return part
+    @property
+    def imdb(self):
+        a = self.soup.select("a[href*=imdb.com]")
+        if a:
+            for part in a[0]["href"].split("/"):
+                if part.startswith("tt"):
+                    return part
 
-	@property
-	def kp_url(self):
-		a = self.soup.select('a[href*=kinopoisk.ru]')
-		return a[0]['href']
+    @property
+    def kp_url(self):
+        a = self.soup.select("a[href*=kinopoisk.ru]")
+        return a[0]["href"]
 
-	@property
-	def plot(self):
-		p = self.soup.find('p', attrs ={'class':'review', 'align': 'justify'})
-		if p:
-			return p.get_text()
+    @property
+    def plot(self):
+        p = self.soup.find("p", attrs={"class": "review", "align": "justify"})
+        if p:
+            return p.get_text()
+
 
 class world_art(world_art_soup):
-	Request_URL = "http://www.world-art.ru/search.php?public_search=%s&global_sector=cinema"
+    Request_URL = (
+        "http://www.world-art.ru/search.php?public_search=%s&global_sector=cinema"
+    )
 
-	def __init__(self, title, year=None, imdbid=None, kp_url=None):
-		from ..util import quote_plus
-		url = self.Request_URL % quote_plus(title.encode('cp1251'))
-		world_art_soup.__init__(self, url)
+    def __init__(self, title, year=None, imdbid=None, kp_url=None):
+        from ..util import quote_plus
 
-		self._title = title
-		self._year = year
-		self._imdbid = imdbid
-		self._kp_url = kp_url
+        url = self.Request_URL % quote_plus(title.encode("cp1251"))
+        world_art_soup.__init__(self, url)
 
-		self._info = None
+        self._title = title
+        self._year = year
+        self._imdbid = imdbid
+        self._kp_url = kp_url
 
-	@property
-	def info(self):
-		if not self._info:
-			results = self.search_by_title(self._title)
+        self._info = None
 
-			#filter by year
-			if self._year:
-				results = [ item for item in results if item.year == self._year ]
+    @property
+    def info(self):
+        if not self._info:
+            results = self.search_by_title(self._title)
 
-			if self._imdbid:
-				results = [ item for item in results if item.imdb == self._imdbid ]
-				if results:
-					self._info = results[0]
-					return	self._info
+            # filter by year
+            if self._year:
+                results = [item for item in results if item.year == self._year]
 
-			if self._kp_url:
-				results = [ item for item in results if IDs.id_by_kp_url(item.kp_url) == IDs.id_by_kp_url(self._kp_url) ]
-				if results:
-					self._info = results[0]
-					return	self._info
+            if self._imdbid:
+                results = [item for item in results if item.imdb == self._imdbid]
+                if results:
+                    self._info = results[0]
+                    return self._info
 
-			# filter by title
-			for item in results:
-				if self._title in item.knowns:
-					self._info = item
-					return	self._info
+            if self._kp_url:
+                results = [
+                    item
+                    for item in results
+                    if IDs.id_by_kp_url(item.kp_url) == IDs.id_by_kp_url(self._kp_url)
+                ]
+                if results:
+                    self._info = results[0]
+                    return self._info
 
-			self._info = 'No info'
+            # filter by title
+            for item in results:
+                if self._title in item.knowns:
+                    self._info = item
+                    return self._info
 
-		#for info in results:
-		#	imdb = info.imdb
+            self._info = "No info"
 
-		if self._info == 'No info':
-			raise AttributeError
+        # for info in results:
+        # 	imdb = info.imdb
 
-		return self._info
+        if self._info == "No info":
+            raise AttributeError
 
-	def search_by_title(self, title):
-		result = []
-		
-		for meta in self.soup.find_all('meta'):
-			# 	meta	<meta content="0; url=/cinema/cinema.php?id=68477" http-equiv="Refresh"/>	Tag
-			if meta.get('http-equiv') == "Refresh" and 'url=/cinema/cinema.php?id=' in meta.get('content'):
-				url = meta.get('content').split('url=/')[-1]
-				info = world_art_info(url)
-				info.year		= self._year
-				#info.knowns		= [ self._title ]
+        return self._info
 
-				result.append( info )
+    def search_by_title(self, title):
+        result = []
 
-		for a in self.soup.find_all('a', class_="estimation"):
+        for meta in self.soup.find_all("meta"):
+            # 	meta	<meta content="0; url=/cinema/cinema.php?id=68477" http-equiv="Refresh"/>	Tag
+            if meta.get(
+                "http-equiv"
+            ) == "Refresh" and "url=/cinema/cinema.php?id=" in meta.get("content"):
+                url = meta.get("content").split("url=/")[-1]
+                info = world_art_info(url)
+                info.year = self._year
+                # info.knowns		= [ self._title ]
 
-			info = world_art_info(a['href'])
+                result.append(info)
 
-			tr = a
-			while tr.name != 'tr':
-				tr = tr.parent
-			info.year = tr.find('td').get_text()
+        for a in self.soup.find_all("a", class_="estimation"):
 
-			td = a.parent
-			info.knowns = [ i.get_text() for i in td.find_all('i') ]
+            info = world_art_info(a["href"])
 
-			result.append( info )
-		return result
+            tr = a
+            while tr.name != "tr":
+                tr = tr.parent
+            info.year = tr.find("td").get_text()
 
-	def plot(self):
-		return self.info.plot
+            td = a.parent
+            info.knowns = [i.get_text() for i in td.find_all("i")]
 
-	#def trailer(self):
-	#	info = self.info
-	def director(self):
-		try:
-			result = self.info.director
-			result = result.replace(u'и другие', '')
-			return [d.strip() for d in result.split(',')]
-		except:
-			return []
+            result.append(info)
+        return result
 
-	def actors(self):
-		try:
-			return self.info.actors
-		except:
-			return []
+    def plot(self):
+        return self.info.plot
+
+    # def trailer(self):
+    # 	info = self.info
+    def director(self):
+        try:
+            result = self.info.director
+            result = result.replace("и другие", "")
+            return [d.strip() for d in result.split(",")]
+        except:
+            return []
+
+    def actors(self):
+        try:
+            return self.info.actors
+        except:
+            return []
+
 
 class tmdb_movie_item(object):
-	def __init__(self, json_data, type='movie'):
-		self.json_data_ = json_data
-		self.type = type
+    def __init__(self, json_data, type="movie"):
+        self.json_data_ = json_data
+        self.type = type
 
-	def poster(self):
-		try:
-			return 'http://image.tmdb.org/t/p/w500' + self.json_data_['poster_path']
-		except BaseException:
-			return ''
+    def poster(self):
+        try:
+            return "http://image.tmdb.org/t/p/w500" + self.json_data_["poster_path"]
+        except BaseException:
+            return ""
 
-	def fanart(self):
-		try:
-			return 'http://image.tmdb.org/t/p/original' + self.json_data_['backdrop_path']
-		except BaseException:
-			return ''
+    def fanart(self):
+        try:
+            return (
+                "http://image.tmdb.org/t/p/original" + self.json_data_["backdrop_path"]
+            )
+        except BaseException:
+            return ""
 
-	def get_art(self):
-		art = {}
+    def get_art(self):
+        art = {}
 
-		path = self.poster()
+        path = self.poster()
 
-		art['thumb'] = path
-		art['poster'] = path
-		art['thumbnailImage'] = path
+        art["thumb"] = path
+        art["poster"] = path
+        art["thumbnailImage"] = path
 
-		art['fanart'] = self.fanart()
+        art["fanart"] = self.fanart()
 
-		return art
+        return art
 
-	def get_info(self):
-		info = {}
+    def get_info(self):
+        info = {}
 
-		if 'genres' in self.json_data_:
-			info['genre'] = u', '.join([i['name'] for i in self.json_data_['genres']])
+        if "genres" in self.json_data_:
+            info["genre"] = ", ".join([i["name"] for i in self.json_data_["genres"]])
 
-		analogy = [
-			('aired', 'release_date'),
-			('plot', 'overview'),
-			('title', 'name'),
-			('originaltitle', 'original_title'),
-			('originaltitle', 'original_name'),
-		]
+        analogy = [
+            ("aired", "release_date"),
+            ("plot", "overview"),
+            ("title", "name"),
+            ("originaltitle", "original_title"),
+            ("originaltitle", "original_name"),
+        ]
 
-		for xbmc_tag, tmdb_tag in analogy:
-			if tmdb_tag in self.json_data_:
-				info[xbmc_tag] = self.json_data_[tmdb_tag]
+        for xbmc_tag, tmdb_tag in analogy:
+            if tmdb_tag in self.json_data_:
+                info[xbmc_tag] = self.json_data_[tmdb_tag]
 
-		for tag in ['first_air_date', 'aired', 'release_date']:
-			if tag in self.json_data_:
-				aired = self.json_data_[tag]
-				if aired:
-					m = re.search(r'(\d{4})', aired)
-					if m:
-						info['year'] = int(m.group(1))
-						break
+        for tag in ["first_air_date", "aired", "release_date"]:
+            if tag in self.json_data_:
+                aired = self.json_data_[tag]
+                if aired:
+                    m = re.search(r"(\d{4})", aired)
+                    if m:
+                        info["year"] = int(m.group(1))
+                        break
 
-		try:
-			vid_item = self.json_data_['videos']['results'][0]
-			if vid_item['site'] == 'YouTube':
-				info['trailer'] = 'plugin://plugin.video.youtube/?action=play_video&videoid=' + vid_item['key']
-		except BaseException:
-			pass
+        try:
+            vid_item = self.json_data_["videos"]["results"][0]
+            if vid_item["site"] == "YouTube":
+                info["trailer"] = (
+                    "plugin://plugin.video.youtube/?action=play_video&videoid="
+                    + vid_item["key"]
+                )
+        except BaseException:
+            pass
 
-		string_items = ['director', 'mpaa', 'title', 'originaltitle', 'duration', 'studio', 'code', 'album', 'votes', 'thumb']
-		for item in string_items:
-			if item in self.json_data_:
-				info[item] = self.json_data_[item]
+        string_items = [
+            "director",
+            "mpaa",
+            "title",
+            "originaltitle",
+            "duration",
+            "studio",
+            "code",
+            "album",
+            "votes",
+            "thumb",
+        ]
+        for item in string_items:
+            if item in self.json_data_:
+                info[item] = self.json_data_[item]
 
-		
+        #  'credits',
 
-		#  'credits',
+        return info
 
-		return info
+    def imdb(self):
+        try:
+            if "imdb_id" in self.json_data_:
+                return self.json_data_["imdb_id"]
+            elif (
+                "external_ids" in self.json_data_
+                and "imdb_id" in self.json_data_["external_ids"]
+            ):
+                return self.json_data_["external_ids"]["imdb_id"]
 
-	def imdb(self):
-		try:
-			if 'imdb_id' in self.json_data_:
-				return self.json_data_['imdb_id']
-			elif 'external_ids' in self.json_data_ and 'imdb_id' in self.json_data_['external_ids']:
-				return self.json_data_['external_ids']['imdb_id']
+        except BaseException:
+            return None
 
-		except BaseException:
-			return None
-
-
-	def tmdb_id(self):
-		if 'id' in self.json_data_:
-			return self.json_data_['id']
-		else:
-			return None
+    def tmdb_id(self):
+        if "id" in self.json_data_:
+            return self.json_data_["id"]
+        else:
+            return None
 
 
 class Object(object):
     pass
 
+
 class KinopoiskAPI(object):
-	# Common session for KP requests
-	session = None
+    # Common session for KP requests
+    session = None
 
-	kp_requests = []
+    kp_requests = []
 
-	@staticmethod
-	def make_url_by_id(kp_id):
-		return 'http://www.kinopoisk.ru/film/' + str(kp_id) + '/'
+    @staticmethod
+    def make_url_by_id(kp_id):
+        return "http://www.kinopoisk.ru/film/" + str(kp_id) + "/"
 
-	def __init__(self, kinopoisk_url = None, settings = None):
-		from settings import Settings
-		self.settings = settings if settings else Settings('')
-		self.kinopoisk_url = kinopoisk_url
-		self.soup = None
-		self._actors = None
+    def __init__(self, kinopoisk_url=None, settings=None):
+        from settings import Settings
 
-	def _http_get(self, url):
-		for resp in KinopoiskAPI.kp_requests:
-			if resp['url'] == url:
-				return resp['response']
+        self.settings = settings if settings else Settings("")
+        self.kinopoisk_url = kinopoisk_url
+        self.soup = None
+        self._actors = None
 
-		r = requests.Response()
+    def _http_get(self, url):
+        for resp in KinopoiskAPI.kp_requests:
+            if resp["url"] == url:
+                return resp["response"]
 
-		if self.session is None:
-			self.session = requests.session()
+        r = requests.Response()
 
+        if self.session is None:
+            self.session = requests.session()
 
-		try:
-			if self.settings.kp_googlecache:
-				r = self.get_google_cache(url)
-			else:
-				proxy = 'socks5h://socks.zaborona.help:1488'
-				proxies = { 'http': proxy, 'https': proxy } if self.settings.kp_usezaborona else None
-				headers = {'user-agent': user_agent}
-				r = self.session.get(url, headers=headers, proxies=proxies, timeout=5.0)
-		except requests.exceptions.ConnectionError as ce:
-			r = requests.Response()
-			r.status_code = requests.codes.service_unavailable
+        try:
+            if self.settings.kp_googlecache:
+                r = self.get_google_cache(url)
+            else:
+                proxy = "socks5h://socks.zaborona.help:1488"
+                proxies = (
+                    {"http": proxy, "https": proxy}
+                    if self.settings.kp_usezaborona
+                    else None
+                )
+                headers = {"user-agent": user_agent}
+                r = self.session.get(url, headers=headers, proxies=proxies, timeout=5.0)
+        except requests.exceptions.ConnectionError as ce:
+            r = requests.Response()
+            r.status_code = requests.codes.service_unavailable
 
-			debug(str(ce))
-		except requests.exceptions.Timeout as te:
-			r = requests.Response()
-			r.status_code = requests.codes.request_timeout
+            debug(str(ce))
+        except requests.exceptions.Timeout as te:
+            r = requests.Response()
+            r.status_code = requests.codes.request_timeout
 
-			debug(str(te))
+            debug(str(te))
 
-		if not self.settings.kp_googlecache:
-			if 'captcha' in r.text:
-				r = self.get_google_cache(url)
+        if not self.settings.kp_googlecache:
+            if "captcha" in r.text:
+                r = self.get_google_cache(url)
 
-		KinopoiskAPI.kp_requests.append({'url': url, 'response': r})
+        KinopoiskAPI.kp_requests.append({"url": url, "response": r})
 
-		return r
+        return r
 
-	def get_google_cache(self, url):
-		from ..util import quote_plus
+    def get_google_cache(self, url):
+        from ..util import quote_plus
 
-		search_url = "http://www.google.com/search?q=" + quote_plus(url)
-		headers = {'user-agent': user_agent}
+        search_url = "http://www.google.com/search?q=" + quote_plus(url)
+        headers = {"user-agent": user_agent}
 
-		r = self.session.get(search_url, headers=headers, timeout=2.0)
+        r = self.session.get(search_url, headers=headers, timeout=2.0)
 
-		try:
-			soup = BeautifulSoup(clean_html(r.text), 'html.parser')
-			a = soup.find('a', class_='fl')
-			if a:
-				cache_url = a['href']
+        try:
+            soup = BeautifulSoup(clean_html(r.text), "html.parser")
+            a = soup.find("a", class_="fl")
+            if a:
+                cache_url = a["href"]
 
-				from ..util import urlparse, urlunparse, ParseResult
-				res = urlparse(cache_url)
-				res = ParseResult(res.scheme if res.scheme else 'https', 
-											res.netloc if res.netloc else 'webcache.googleusercontent.com', 
-											res.path, res.params, res.query, res.fragment)
-				cache_url = urlunparse(res)
+                from ..util import urlparse, urlunparse, ParseResult
 
-				#print cache_url
-				r = self.session.get(cache_url, headers=headers, timeout=2.0)
-			
-				indx = r._content.find('<html')
-				r._content = r._content[indx:]
-				resp = r
-				return resp
-		except BaseException as e:
-			debug(str(e))
-	
-		return requests.Response()
+                res = urlparse(cache_url)
+                res = ParseResult(
+                    res.scheme if res.scheme else "https",
+                    res.netloc if res.netloc else "webcache.googleusercontent.com",
+                    res.path,
+                    res.params,
+                    res.query,
+                    res.fragment,
+                )
+                cache_url = urlunparse(res)
 
-	def makeSoup(self):
-		if self.kinopoisk_url and self.soup is None:
-			r = self._http_get(self.kinopoisk_url)
-			if r.status_code == requests.codes.ok:
-				text = clean_html(r.content)
-				self.soup = BeautifulSoup(text, 'html.parser')
-			else:
-				pass
+                # print cache_url
+                r = self.session.get(cache_url, headers=headers, timeout=2.0)
 
-	def title(self):
-		title = None
+                indx = r._content.find("<html")
+                r._content = r._content[indx:]
+                resp = r
+                return resp
+        except BaseException as e:
+            debug(str(e))
 
-		self.makeSoup()
-		if self.soup:
-			s = self.soup.find('span', class_='moviename-title-wrapper')
-			if s:
-				title = s.get_text().strip('\t\r\n ')
+        return requests.Response()
 
-		return title
+    def makeSoup(self):
+        if self.kinopoisk_url and self.soup is None:
+            r = self._http_get(self.kinopoisk_url)
+            if r.status_code == requests.codes.ok:
+                text = clean_html(r.content)
+                self.soup = BeautifulSoup(text, "html.parser")
+            else:
+                pass
 
-	def originaltitle(self):
-		title = None
+    def title(self):
+        title = None
 
-		self.makeSoup()
-		if self.soup:
-			span = self.soup.find('span', attrs = {'itemprop': 'alternativeHeadline'})
-			if span:
-				title = span.get_text().strip('\t\r\n ')
-		return title
+        self.makeSoup()
+        if self.soup:
+            s = self.soup.find("span", class_="moviename-title-wrapper")
+            if s:
+                title = s.get_text().strip("\t\r\n ")
 
-	def year(self):
-		self.makeSoup()
-		if self.soup:
-			for a in self.soup.find_all('a'):
-				if '/lists/m_act%5Byear%5D/' in a.get('href', ''):
-					return a.get_text()
-		raise AttributeError
+        return title
 
-	def director(self):
-		self.makeSoup()
-		if self.soup:
-			#<td itemprop="director"><a href="/name/535852/" data-popup-info="enabled">Роар Утхауг</a></td>
-			td = self.soup.find('td', attrs={"itemprop": "director"})
-			if td:
-				return [ a.get_text() for a in td.find_all('a') if '/name' in a['href'] ]
-		raise AttributeError
+    def originaltitle(self):
+        title = None
 
-	def plot(self):
-		plot = None
+        self.makeSoup()
+        if self.soup:
+            span = self.soup.find("span", attrs={"itemprop": "alternativeHeadline"})
+            if span:
+                title = span.get_text().strip("\t\r\n ")
+        return title
 
-		self.makeSoup()
-		if self.soup:
-			div = self.soup.find('div', attrs={"itemprop": "description"})
-			if div:
-				plot = div.get_text().replace(u'\xa0', u' ')
-				return plot
+    def year(self):
+        self.makeSoup()
+        if self.soup:
+            for a in self.soup.find_all("a"):
+                if "/lists/m_act%5Byear%5D/" in a.get("href", ""):
+                    return a.get_text()
+        raise AttributeError
 
-		raise AttributeError
+    def director(self):
+        self.makeSoup()
+        if self.soup:
+            # <td itemprop="director"><a href="/name/535852/" data-popup-info="enabled">Роар Утхауг</a></td>
+            td = self.soup.find("td", attrs={"itemprop": "director"})
+            if td:
+                return [a.get_text() for a in td.find_all("a") if "/name" in a["href"]]
+        raise AttributeError
 
-	def base_actors_list(self):
-		actors = []
+    def plot(self):
+        plot = None
 
-		self.makeSoup()
-		if self.soup:
-			for li in self.soup.find_all('li', attrs={'itemprop': 'actors'}):
-				a = li.find('a')
-				if a:
-					actors.append(a.get_text())
+        self.makeSoup()
+        if self.soup:
+            div = self.soup.find("div", attrs={"itemprop": "description"})
+            if div:
+                plot = div.get_text().replace("\xa0", " ")
+                return plot
 
-		if '...' in actors:
-			actors.remove('...')
-		if actors:
-			return ', '.join(actors)
-		else:
-			return ''
+        raise AttributeError
 
-	def actors(self):
-		if self._actors is not None:
-			return self._actors
+    def base_actors_list(self):
+        actors = []
 
-		self._actors = []
+        self.makeSoup()
+        if self.soup:
+            for li in self.soup.find_all("li", attrs={"itemprop": "actors"}):
+                a = li.find("a")
+                if a:
+                    actors.append(a.get_text())
 
-		if self.kinopoisk_url:
-			cast_url = self.kinopoisk_url + 'cast/'
-			r = self._http_get(cast_url)
-			if r.status_code == requests.codes.ok:
-				text = clean_html(r.text)
-				soup = BeautifulSoup(text, 'html.parser')
-				
-				if not soup:
-					return []
+        if "..." in actors:
+            actors.remove("...")
+        if actors:
+            return ", ".join(actors)
+        else:
+            return ""
 
-				for actorInfo in soup.find_all('div', class_='actorInfo'):
-					photo 		= actorInfo.select('div.photo a')[0]['href']
-					#http://st.kp.yandex.net/images/actor_iphone/iphone360_30098.jpg
-					#/name/7627/
-					photo 		= photo.replace('/', '').replace('name', '')
-					photo 		= 'http://st.kp.yandex.net/images/actor_iphone/iphone360_' + photo + '.jpg'
-					ru_name		= actorInfo.select('div.info .name a')[0].get_text()
-					en_name		= actorInfo.select('div.info .name span')[0].get_text()
-					role		= actorInfo.select('div.info .role')[0].get_text().replace('... ', '')
-					role 		= role.split(',')[0]
-					self._actors.append({'photo': photo,'ru_name': ru_name,'en_name': en_name,'role': role})
-		return self._actors
+    def actors(self):
+        if self._actors is not None:
+            return self._actors
 
-	def __trailer(self, element):
-		for parent in element.parents:
-			#debug(parent.tag)
-			if parent.name == 'tr':
-				for tr in parent.next_siblings:
-					if not hasattr(tr, 'select'):
-						continue
-					if tr.name != 'tr':
-						continue
-					for a_cont in tr.select('a.continue'):
-						if u'Высокое качество' in a_cont.get_text():
-							trailer = a_cont['href']
-							trailer = re.search('link=(.+?)$', trailer).group(1)
-							try:
-								debug('trailer: ' + trailer)
-							except:
-								pass
-							return trailer
-		return None
+        self._actors = []
 
-	def trailer(self):
-		if self.kinopoisk_url:
-			trailer_page = self.kinopoisk_url + 'video/type/1/'
-			r = self._http_get(trailer_page)
-			if r.status_code == requests.codes.ok:
-				text = clean_html(r.text)
-				soup = BeautifulSoup(text, 'html.parser')
-				
-				if not soup:
-					return None
+        if self.kinopoisk_url:
+            cast_url = self.kinopoisk_url + "cast/"
+            r = self._http_get(cast_url)
+            if r.status_code == requests.codes.ok:
+                text = clean_html(r.text)
+                soup = BeautifulSoup(text, "html.parser")
 
-				for div in soup.select('tr td div div.flag2'):
-					trailer = self.__trailer(div)
-					if trailer:
-						return trailer
-				for a in soup.select('a.all'):
-					return self.__trailer(a)
-		return None
+                if not soup:
+                    return []
 
-	def poster(self):
-		raise AttributeError
+                for actorInfo in soup.find_all("div", class_="actorInfo"):
+                    photo = actorInfo.select("div.photo a")[0]["href"]
+                    # http://st.kp.yandex.net/images/actor_iphone/iphone360_30098.jpg
+                    # /name/7627/
+                    photo = photo.replace("/", "").replace("name", "")
+                    photo = (
+                        "http://st.kp.yandex.net/images/actor_iphone/iphone360_"
+                        + photo
+                        + ".jpg"
+                    )
+                    ru_name = actorInfo.select("div.info .name a")[0].get_text()
+                    en_name = actorInfo.select("div.info .name span")[0].get_text()
+                    role = (
+                        actorInfo.select("div.info .role")[0]
+                        .get_text()
+                        .replace("... ", "")
+                    )
+                    role = role.split(",")[0]
+                    self._actors.append(
+                        {
+                            "photo": photo,
+                            "ru_name": ru_name,
+                            "en_name": en_name,
+                            "role": role,
+                        }
+                    )
+        return self._actors
+
+    def __trailer(self, element):
+        for parent in element.parents:
+            # debug(parent.tag)
+            if parent.name == "tr":
+                for tr in parent.next_siblings:
+                    if not hasattr(tr, "select"):
+                        continue
+                    if tr.name != "tr":
+                        continue
+                    for a_cont in tr.select("a.continue"):
+                        if "Высокое качество" in a_cont.get_text():
+                            trailer = a_cont["href"]
+                            trailer = re.search("link=(.+?)$", trailer).group(1)
+                            try:
+                                debug("trailer: " + trailer)
+                            except:
+                                pass
+                            return trailer
+        return None
+
+    def trailer(self):
+        if self.kinopoisk_url:
+            trailer_page = self.kinopoisk_url + "video/type/1/"
+            r = self._http_get(trailer_page)
+            if r.status_code == requests.codes.ok:
+                text = clean_html(r.text)
+                soup = BeautifulSoup(text, "html.parser")
+
+                if not soup:
+                    return None
+
+                for div in soup.select("tr td div div.flag2"):
+                    trailer = self.__trailer(div)
+                    if trailer:
+                        return trailer
+                for a in soup.select("a.all"):
+                    return self.__trailer(a)
+        return None
+
+    def poster(self):
+        raise AttributeError
+
 
 class imdb_cast(soup_base):
-	def __init__(self, url):
-		soup_base(self, url + '/fullcredits')
-		self._actors = []
+    def __init__(self, url):
+        soup_base(self, url + "/fullcredits")
+        self._actors = []
 
-	@property
-	def actors(self):
-		if not self._actors:
-			tbl = self.soup.find('table', class_='cast_list')
-			if tbl:
-				for tr in tbl.find('tr'):
-					if 'class' in tr:
-						act = {}
-						# https://images-na.ssl-images-amazon.com/images/M/MV5BMTkxMzk2MDkwOV5BMl5BanBnXkFtZTcwMDAxODQwMg@@._V1_UX32_CR0,0,32,44_AL_.jpg
-						# https://images-na.ssl-images-amazon.com/images/M/MV5BMjExNzA4MDYxN15BMl5BanBnXkFtZTcwOTI1MDAxOQ@@._V1_SY1000_CR0,0,721,1000_AL_.jpg
-						# https://images-na.ssl-images-amazon.com/images/M/MV5BMjExNzA4MDYxN15BMl5BanBnXkFtZTcwOTI1MDAxOQ@@._V1_UY317_CR7,0,214,317_AL_.jpg
-						#img = tr.find('img')
+    @property
+    def actors(self):
+        if not self._actors:
+            tbl = self.soup.find("table", class_="cast_list")
+            if tbl:
+                for tr in tbl.find("tr"):
+                    if "class" in tr:
+                        act = {}
+                        # https://images-na.ssl-images-amazon.com/images/M/MV5BMTkxMzk2MDkwOV5BMl5BanBnXkFtZTcwMDAxODQwMg@@._V1_UX32_CR0,0,32,44_AL_.jpg
+                        # https://images-na.ssl-images-amazon.com/images/M/MV5BMjExNzA4MDYxN15BMl5BanBnXkFtZTcwOTI1MDAxOQ@@._V1_SY1000_CR0,0,721,1000_AL_.jpg
+                        # https://images-na.ssl-images-amazon.com/images/M/MV5BMjExNzA4MDYxN15BMl5BanBnXkFtZTcwOTI1MDAxOQ@@._V1_UY317_CR7,0,214,317_AL_.jpg
+                        # img = tr.find('img')
 
 
 class ImdbAPI(object):
-	headers = { 'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7' }
+    headers = {"Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"}
 
-	def __init__(self, imdb_id):
+    def __init__(self, imdb_id):
 
-		resp = requests.get('http://www.imdb.com/title/' + imdb_id + '/', headers=self.headers)
-		if resp.status_code == requests.codes.ok:
-			text = clean_html(resp.content)
-			self.page = BeautifulSoup(text, 'html.parser')
+        resp = requests.get(
+            "http://www.imdb.com/title/" + imdb_id + "/", headers=self.headers
+        )
+        if resp.status_code == requests.codes.ok:
+            text = clean_html(resp.content)
+            self.page = BeautifulSoup(text, "html.parser")
 
-	def year(self):
-		a = self.page.find('a', href=re.compile(r'releaseinfo\?ref_=tt_ov_rdat'))
-		if a:
-			result = a.get_text()
-			return result[:4]
-		else:
-			raise AttributeError
+    def year(self):
+        a = self.page.find("a", href=re.compile(r"releaseinfo\?ref_=tt_ov_rdat"))
+        if a:
+            result = a.get_text()
+            return result[:4]
+        else:
+            raise AttributeError
 
-	def rating(self):
-		span = self.page.find('span', class_=re.compile(r'AggregateRatingButton__RatingScore'))
-		if span:
-			return span.get_text().replace(',', '.')
-		else:
-			raise AttributeError
+    def rating(self):
+        span = self.page.find(
+            "span", class_=re.compile(r"AggregateRatingButton__RatingScore")
+        )
+        if span:
+            return span.get_text().replace(",", ".")
+        else:
+            raise AttributeError
 
-	def runtime(self):
-		div = self.page.find('div', class_=re.compile(r'TitleBlock__TitleMetaDataContainer'))
-		for li in div.find_all('li'):
-			if re.match(r'\d+(h|min)', li.get_text()):
-				return li.get_text()
-		raise AttributeError
+    def runtime(self):
+        div = self.page.find(
+            "div", class_=re.compile(r"TitleBlock__TitleMetaDataContainer")
+        )
+        for li in div.find_all("li"):
+            if re.match(r"\d+(h|min)", li.get_text()):
+                return li.get_text()
+        raise AttributeError
 
-	def mpaa(self):
-		pattern = r"/title/tt\d+/parentalguide/certificates"
-		a = self.page.find('a', href=re.compile(pattern))
-		if a:
-			return a.get_text()
-		else:
-			raise AttributeError
+    def mpaa(self):
+        pattern = r"/title/tt\d+/parentalguide/certificates"
+        a = self.page.find("a", href=re.compile(pattern))
+        if a:
+            return a.get_text()
+        else:
+            raise AttributeError
 
-	def title(self):
-		from ..util.string import uni_type
-		h1 = self.page.find('h1', class_=re.compile(r'TitleHeader__TitleText'))
-		if h1:
-			return uni_type( h1.contents[0] ).replace(u'\xa0', u' ').strip()
-		else:
-			raise AttributeError
+    def title(self):
+        from ..util.string import uni_type
 
-	def originaltitle(self):
-		from ..util.string import uni_type
-		div = self.page.find('div', class_=re.compile(r'OriginalTitle__OriginalTitleText'))
-		if div:
-			return uni_type( div.contents[0] ).replace(u'\xa0', u' ').strip().replace('Original title: ', '')
-		else:
-			raise AttributeError
+        h1 = self.page.find("h1", class_=re.compile(r"TitleHeader__TitleText"))
+        if h1:
+            return uni_type(h1.contents[0]).replace("\xa0", " ").strip()
+        else:
+            raise AttributeError
 
-	def type(self):
-		a = self.page.find('a', href=re.compile(r'/title/tt\d+/episodes'))
-		return 'tvshow' if a else 'movie'
+    def originaltitle(self):
+        from ..util.string import uni_type
+
+        div = self.page.find(
+            "div", class_=re.compile(r"OriginalTitle__OriginalTitleText")
+        )
+        if div:
+            return (
+                uni_type(div.contents[0])
+                .replace("\xa0", " ")
+                .strip()
+                .replace("Original title: ", "")
+            )
+        else:
+            raise AttributeError
+
+    def type(self):
+        a = self.page.find("a", href=re.compile(r"/title/tt\d+/episodes"))
+        return "tvshow" if a else "movie"
 
 
 class KinopoiskAPI2(KinopoiskAPI):
 
-	movie_cc = {}
-	token = '037313259a17be837be3bd04a51bf678'
+    movie_cc = {}
+    token = "037313259a17be837be3bd04a51bf678"
 
-	def __init__(self, kinopoisk_url = None, settings = None):
+    def __init__(self, kinopoisk_url=None, settings=None):
 
-		if kinopoisk_url:		
-			self.kp_id = IDs.id_by_kp_url(kinopoisk_url)
-			return super(KinopoiskAPI2, self).__init__(kinopoisk_url, settings)
-		else:
-			self.kp_id = None
+        if kinopoisk_url:
+            self.kp_id = IDs.id_by_kp_url(kinopoisk_url)
+            return super(KinopoiskAPI2, self).__init__(kinopoisk_url, settings)
+        else:
+            self.kp_id = None
 
-	@property
-	def data_cc(self):
-		if self.kp_id is None:
-			return {}
+    @property
+    def data_cc(self):
+        if self.kp_id is None:
+            return {}
 
-		if self.kp_id in self.movie_cc:
-			return self.movie_cc[self.kp_id]
+        if self.kp_id in self.movie_cc:
+            return self.movie_cc[self.kp_id]
 
-		url = 'http://getmovie.cc/api/kinopoisk.json?id=%s&token=%s' % (self.kp_id, self.token)
-		r = requests.get(url)
-		if r.status_code == requests.codes.ok:
-			self.movie_cc[self.kp_id] = r.json()
-			return self.movie_cc[self.kp_id]
+        url = "http://getmovie.cc/api/kinopoisk.json?id=%s&token=%s" % (
+            self.kp_id,
+            self.token,
+        )
+        r = requests.get(url)
+        if r.status_code == requests.codes.ok:
+            self.movie_cc[self.kp_id] = r.json()
+            return self.movie_cc[self.kp_id]
 
-		return {}
+        return {}
 
-	def title(self):
-		return self.data_cc.get('name_ru')
+    def title(self):
+        return self.data_cc.get("name_ru")
 
-	def originaltitle(self):
-		return self.data_cc.get('name_en')
+    def originaltitle(self):
+        return self.data_cc.get("name_en")
 
-	def year(self):
-		return self.data_cc.get('year')
+    def year(self):
+        return self.data_cc.get("year")
 
-	def plot(self):
-		return self.data_cc.get('description')		#.replace('<br/>', '<br/>')
+    def plot(self):
+        return self.data_cc.get("description")  # .replace('<br/>', '<br/>')
 
-	def actors(self):
-		if self._actors is not None:
-			return self._actors
+    def actors(self):
+        if self._actors is not None:
+            return self._actors
 
-		self._actors = []
+        self._actors = []
 
-		creators = self.data_cc.get('creators')
-		if creators:
-			for actor in creators.get('actor', []):
-				self._actors.append({'photo': actor.get("photos_person"),
-						'ru_name': actor.get("name_person_ru"),'en_name': actor.get("name_person_en")})
+        creators = self.data_cc.get("creators")
+        if creators:
+            for actor in creators.get("actor", []):
+                self._actors.append(
+                    {
+                        "photo": actor.get("photos_person"),
+                        "ru_name": actor.get("name_person_ru"),
+                        "en_name": actor.get("name_person_en"),
+                    }
+                )
 
-		return self._actors
+        return self._actors
 
-	def trailer(self):
-		return self.data_cc.get('trailer')
+    def trailer(self):
+        return self.data_cc.get("trailer")
 
-	def poster(self):
-		return 'https://st.kp.yandex.net/images/film_big/{}.jpg'.format(self.kp_id)
+    def poster(self):
+        return "https://st.kp.yandex.net/images/film_big/{}.jpg".format(self.kp_id)
+
 
 class TMDB_API(object):
-	api_url		= 'https://api.themoviedb.org/3'
-	tmdb_api_key = get_tmdb_api_key()
+    api_url = "https://api.themoviedb.org/3"
+    tmdb_api_key = get_tmdb_api_key()
 
-	@staticmethod
-	def url_imdb_id(idmb_id):
-		
-		url = 'http://%s/3/find/%s?api_key=%s&language=ru&external_source=imdb_id' % (TMDB_API.tmdb_api_key['host'], idmb_id, TMDB_API.tmdb_api_key['key'])
-		tmdb_data 	= json.load(urlopen( url ))
+    @staticmethod
+    def url_imdb_id(idmb_id):
 
-		for type in ['movie', 'tv']:
-			try:
-				id = tmdb_data['%s_results' % type][0]['id']
-				return 'http://%s/3/' % TMDB_API.tmdb_api_key['host'] + type + '/' + str(id) + '?api_key=' + TMDB_API.tmdb_api_key['key'] + '&language=ru&append_to_response=credits'
-			except: pass
+        url = "http://%s/3/find/%s?api_key=%s&language=ru&external_source=imdb_id" % (
+            TMDB_API.tmdb_api_key["host"],
+            idmb_id,
+            TMDB_API.tmdb_api_key["key"],
+        )
+        tmdb_data = json.load(urlopen(url))
 
-		return None
+        for type in ["movie", "tv"]:
+            try:
+                id = tmdb_data["%s_results" % type][0]["id"]
+                return (
+                    "http://%s/3/" % TMDB_API.tmdb_api_key["host"]
+                    + type
+                    + "/"
+                    + str(id)
+                    + "?api_key="
+                    + TMDB_API.tmdb_api_key["key"]
+                    + "&language=ru&append_to_response=credits"
+                )
+            except:
+                pass
 
-	@staticmethod
-	def search(title):
-		from ..util import quote
-		url = 'http://%s/3/search/movie?query=' % TMDB_API.tmdb_api_key['host'] + quote(title.encode('utf-8')) + '&api_key=' + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		movies = TMDB_API.tmdb_query(url)
-		url = 'http://%s/3/search/tv?query=' % TMDB_API.tmdb_api_key['host'] + quote(title.encode('utf-8')) + '&api_key=' + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		tv = TMDB_API.tmdb_query(url, 'tv')
-		return movies + tv
+        return None
 
-	@staticmethod
-	def tmdb_query(url, type='movie'):
+    @staticmethod
+    def search(title):
+        from ..util import quote
 
-		class tmdb_query_result(object):
-			def __init__(self):
-				self.result = []
-				self.total_pages = None
+        url = (
+            "http://%s/3/search/movie?query=" % TMDB_API.tmdb_api_key["host"]
+            + quote(title.encode("utf-8"))
+            + "&api_key="
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        movies = TMDB_API.tmdb_query(url)
+        url = (
+            "http://%s/3/search/tv?query=" % TMDB_API.tmdb_api_key["host"]
+            + quote(title.encode("utf-8"))
+            + "&api_key="
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        tv = TMDB_API.tmdb_query(url, "tv")
+        return movies + tv
 
-			def append(self, item):
-				self.result.append(item)
+    @staticmethod
+    def tmdb_query(url, type="movie"):
+        class tmdb_query_result(object):
+            def __init__(self):
+                self.result = []
+                self.total_pages = None
 
-			def __iter__(self):
-				for x in self.result:
-					yield x
+            def append(self, item):
+                self.result.append(item)
 
-			def __add__(self, other):
-				r = tmdb_query_result()
-				r.result = self.result + other.result
-				return r
+            def __iter__(self):
+                for x in self.result:
+                    yield x
 
-			def __len__(self):
-				return len(self.result)
+            def __add__(self, other):
+                r = tmdb_query_result()
+                r.result = self.result + other.result
+                return r
 
-			def __getitem__(self, index):
-				return self.result[index]
+            def __len__(self):
+                return len(self.result)
 
-			def __bool__(self):
-				return len(self.result) != 0
+            def __getitem__(self, index):
+                return self.result[index]
 
-			__nonzero__ = __bool__				
+            def __bool__(self):
+                return len(self.result) != 0
 
-		result = tmdb_query_result()
-		try:
-			from ..util import HTTPError
-			debug('Request is: ' + url)
-			data = json.load(urlopen(url))
-			debug(u'data is: {}'.format(data))
-		except HTTPError as e:
-			debug('Error TMDB request')
-			debug(e)
-			return tmdb_query_result()
+            __nonzero__ = __bool__
 
-		if "total_pages" in data:
-			result.total_pages = data["total_pages"]
+        result = tmdb_query_result()
+        try:
+            from ..util import HTTPError
 
-		for tag in ['results', 'movie_results', 'tv_results']:
-			if tag in data:
-				for r in data[tag]:
-					if not r['overview']:
-						continue
+            debug("Request is: " + url)
+            data = json.load(urlopen(url))
+            debug("data is: {}".format(data))
+        except HTTPError as e:
+            debug("Error TMDB request")
+            debug(e)
+            return tmdb_query_result()
 
-					if '_results' in tag:
-						type = tag.replace('_results', '')
+        if "total_pages" in data:
+            result.total_pages = data["total_pages"]
 
-					url2 = 'http://%s/3/' % TMDB_API.tmdb_api_key['host'] + type + '/' + str(
-						r['id']) + '?api_key=' + TMDB_API.tmdb_api_key['key'] + '&language=ru&append_to_response=credits,videos,external_ids'
-					data2 = json.load(urlopen(url2))
+        for tag in ["results", "movie_results", "tv_results"]:
+            if tag in data:
+                for r in data[tag]:
+                    if not r["overview"]:
+                        continue
 
-					if 'imdb_id' in data2:
-						result.append(tmdb_movie_item(data2, type))
-					elif 'external_ids' in data2 and 'imdb_id' in data2['external_ids']:
-						result.append(tmdb_movie_item(data2, type))
+                    if "_results" in tag:
+                        type = tag.replace("_results", "")
 
-		return result
+                    url2 = (
+                        "http://%s/3/" % TMDB_API.tmdb_api_key["host"]
+                        + type
+                        + "/"
+                        + str(r["id"])
+                        + "?api_key="
+                        + TMDB_API.tmdb_api_key["key"]
+                        + "&language=ru&append_to_response=credits,videos,external_ids"
+                    )
+                    data2 = json.load(urlopen(url2))
 
-	@staticmethod
-	def tmdb_by_imdb(imdb, type):
-		url = 'http://%s/3/find/' % TMDB_API.tmdb_api_key['host'] + imdb + '?external_source=imdb_id&api_key=' + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		url += '&append_to_response=credits,videos,external_ids'
-		debug(url)
-		return TMDB_API.tmdb_query(url, type)
+                    if "imdb_id" in data2:
+                        result.append(tmdb_movie_item(data2, type))
+                    elif "external_ids" in data2 and "imdb_id" in data2["external_ids"]:
+                        result.append(tmdb_movie_item(data2, type))
 
-	@staticmethod
-	def popular(page=1):
-		url = 'http://%s/3/movie/popular?api_key=' % TMDB_API.tmdb_api_key['host'] + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		url += '&page={}'.format(page)
-		return TMDB_API.tmdb_query(url)
+        return result
 
-	@staticmethod
-	def popular_by_genre(genre, page=1):
-		url = 'http://%s/3/discover/movie?api_key=' % TMDB_API.tmdb_api_key['host'] + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		#url += '&sort_by=popularity.desc'
-		#url += '&sort_by=vote_average.desc&vote_count.gte=50'
-		url += '&with_release_type=4|5|6'
-		url += '&with_genres={}'.format(genre)
-		url += '&page={}'.format(page)
-		return TMDB_API.tmdb_query(url)
+    @staticmethod
+    def tmdb_by_imdb(imdb, type):
+        url = (
+            "http://%s/3/find/" % TMDB_API.tmdb_api_key["host"]
+            + imdb
+            + "?external_source=imdb_id&api_key="
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        url += "&append_to_response=credits,videos,external_ids"
+        debug(url)
+        return TMDB_API.tmdb_query(url, type)
 
-	@staticmethod
-	def popular_tv(page=1):
-		url = 'http://%s/3/tv/popular?api_key=' % TMDB_API.tmdb_api_key['host'] + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		url += '&page={}'.format(page)
-		return TMDB_API.tmdb_query(url, 'tv')
+    @staticmethod
+    def popular(page=1):
+        url = (
+            "http://%s/3/movie/popular?api_key=" % TMDB_API.tmdb_api_key["host"]
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        url += "&page={}".format(page)
+        return TMDB_API.tmdb_query(url)
 
-	@staticmethod
-	def top_rated(page=1):
-		url = 'http://%s/3/movie/top_rated?api_key=' % TMDB_API.tmdb_api_key['host'] + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		url += '&page={}'.format(page)
-		return TMDB_API.tmdb_query(url)
+    @staticmethod
+    def popular_by_genre(genre, page=1):
+        url = (
+            "http://%s/3/discover/movie?api_key=" % TMDB_API.tmdb_api_key["host"]
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        # url += '&sort_by=popularity.desc'
+        # url += '&sort_by=vote_average.desc&vote_count.gte=50'
+        url += "&with_release_type=4|5|6"
+        url += "&with_genres={}".format(genre)
+        url += "&page={}".format(page)
+        return TMDB_API.tmdb_query(url)
 
-	@staticmethod
-	def top_rated_tv(page=1):
-		url = 'http://%s/3/tv/top_rated?api_key=' % TMDB_API.tmdb_api_key['host'] + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		url += '&page={}'.format(page)
-		return TMDB_API.tmdb_query(url, 'tv')
+    @staticmethod
+    def popular_tv(page=1):
+        url = (
+            "http://%s/3/tv/popular?api_key=" % TMDB_API.tmdb_api_key["host"]
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        url += "&page={}".format(page)
+        return TMDB_API.tmdb_query(url, "tv")
 
-	@staticmethod
-	def show_similar_t(page, tmdb_id, type):
-		url = 'http://%s/3/' % TMDB_API.tmdb_api_key['host'] + type + '/' + str(
-				tmdb_id) + '/similar?api_key=' + TMDB_API.tmdb_api_key['key'] + '&language=ru'
-		url += '&page={}'.format(page)
-		log.debug(url)
-		return TMDB_API.tmdb_query(url, type)
+    @staticmethod
+    def top_rated(page=1):
+        url = (
+            "http://%s/3/movie/top_rated?api_key=" % TMDB_API.tmdb_api_key["host"]
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        url += "&page={}".format(page)
+        return TMDB_API.tmdb_query(url)
 
-	@staticmethod
-	def show_similar(tmdb_id):
-		return TMDB_API.show_similar_t(1, tmdb_id, 'movie') + TMDB_API.show_similar_t(1, tmdb_id, 'tv')
+    @staticmethod
+    def top_rated_tv(page=1):
+        url = (
+            "http://%s/3/tv/top_rated?api_key=" % TMDB_API.tmdb_api_key["host"]
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        url += "&page={}".format(page)
+        return TMDB_API.tmdb_query(url, "tv")
 
-	@staticmethod
-	def imdb_by_tmdb_search(orig, year):
-		try:
-			for res in TMDB_API.search(orig):
-				r = res.json_data_
+    @staticmethod
+    def show_similar_t(page, tmdb_id, type):
+        url = (
+            "http://%s/3/" % TMDB_API.tmdb_api_key["host"]
+            + type
+            + "/"
+            + str(tmdb_id)
+            + "/similar?api_key="
+            + TMDB_API.tmdb_api_key["key"]
+            + "&language=ru"
+        )
+        url += "&page={}".format(page)
+        log.debug(url)
+        return TMDB_API.tmdb_query(url, type)
 
-				release_date = r.get('release_date')
-				if year and release_date and year not in release_date:
-					continue
+    @staticmethod
+    def show_similar(tmdb_id):
+        return TMDB_API.show_similar_t(1, tmdb_id, "movie") + TMDB_API.show_similar_t(
+            1, tmdb_id, "tv"
+        )
 
-				r_title				= r.get('title')
-				r_original_title	= r.get('original_title')
+    @staticmethod
+    def imdb_by_tmdb_search(orig, year):
+        try:
+            for res in TMDB_API.search(orig):
+                r = res.json_data_
 
-				if orig and ( orig == r_title or orig == r_original_title):
-					return r['imdb_id']
+                release_date = r.get("release_date")
+                if year and release_date and year not in release_date:
+                    continue
 
-		except BaseException as e:
-			from log import print_tb
-			print_tb(e)
+                r_title = r.get("title")
+                r_original_title = r.get("original_title")
 
-		return None
+                if orig and (orig == r_title or orig == r_original_title):
+                    return r["imdb_id"]
 
-	@staticmethod
-	def genres_list():
-		# &language=ru
-		_ = TMDB_API.tmdb_api_key
-		url = 'http://{}/3/genre/movie/list?api_key={}'.format(_['host'], _['key'])
+        except BaseException as e:
+            from log import print_tb
 
-		en = requests.get(url + '&language=en').json()['genres']
-		ru = requests.get(url + '&language=ru').json()['genres']
+            print_tb(e)
 
-		return [ { 'id': item[0]['id'], 'en_name': item[0]['name'], 'ru_name': item[1]['name'] } for item in zip(en, ru) ]
+        return None
 
-	def __init__(self, imdb_id = None):
-		if imdb_id:
-			url_ = TMDB_API.url_imdb_id(imdb_id)
-			try:
-				if url_:
-					self.tmdb_data 	= json.load(urlopen( url_ ))
-					debug('tmdb_data (' + url_ + ') \t\t\t[Ok]')
-				else:
-					self.tmdb_data = None
-			except:
-				self.tmdb_data = None
+    @staticmethod
+    def genres_list():
+        # &language=ru
+        _ = TMDB_API.tmdb_api_key
+        url = "http://{}/3/genre/movie/list?api_key={}".format(_["host"], _["key"])
 
-	def title(self):
-		try:
-			if 'title' in self.tmdb_data:
-				return self.tmdb_data['title']
-			if 'name' in self.tmdb_data:
-				return self.tmdb_data['name']
-		except:
-			pass
-		raise AttributeError
+        en = requests.get(url + "&language=en").json()["genres"]
+        ru = requests.get(url + "&language=ru").json()["genres"]
 
-	def originaltitle(self):
-		try:
-			if 'original_title' in self.tmdb_data:
-				return self.tmdb_data['original_title']
-			if 'original_name' in self.tmdb_data:
-				return self.tmdb_data['original_name']
-		except:
-			pass
-		raise AttributeError
+        return [
+            {
+                "id": item[0]["id"],
+                "en_name": item[0]["name"],
+                "ru_name": item[1]["name"],
+            }
+            for item in zip(en, ru)
+        ]
 
-	def year(self):
-		try:
-			return self.tmdb_data['release_date'].split('-')[0]
-		except:
-			raise AttributeError
+    def __init__(self, imdb_id=None):
+        if imdb_id:
+            url_ = TMDB_API.url_imdb_id(imdb_id)
+            try:
+                if url_:
+                    self.tmdb_data = json.load(urlopen(url_))
+                    debug("tmdb_data (" + url_ + ") \t\t\t[Ok]")
+                else:
+                    self.tmdb_data = None
+            except:
+                self.tmdb_data = None
 
-	def poster(self):
-		return u'http://image.tmdb.org/t/p/original' + self.tmdb_data[u'poster_path']
+    def title(self):
+        try:
+            if "title" in self.tmdb_data:
+                return self.tmdb_data["title"]
+            if "name" in self.tmdb_data:
+                return self.tmdb_data["name"]
+        except:
+            pass
+        raise AttributeError
 
-	def fanart(self):
-		return u'http://image.tmdb.org/t/p/original' + self.tmdb_data[u'backdrop_path']
+    def originaltitle(self):
+        try:
+            if "original_title" in self.tmdb_data:
+                return self.tmdb_data["original_title"]
+            if "original_name" in self.tmdb_data:
+                return self.tmdb_data["original_name"]
+        except:
+            pass
+        raise AttributeError
 
-	def set(self):
-		try:
-			if u'belongs_to_collection' in self.tmdb_data:
-				belongs_to_collection = self.tmdb_data[u'belongs_to_collection']
-				if belongs_to_collection and u'name' in belongs_to_collection:
-					return belongs_to_collection[u'name']
-		except:
-			pass
-			
-		raise AttributeError
+    def year(self):
+        try:
+            return self.tmdb_data["release_date"].split("-")[0]
+        except:
+            raise AttributeError
 
-	def runtime(self):
-		return self.tmdb_data['runtime']
+    def poster(self):
+        return "http://image.tmdb.org/t/p/original" + self.tmdb_data["poster_path"]
 
-	def tag(self):
-		return self.tmdb_data[u'tagline']
+    def fanart(self):
+        return "http://image.tmdb.org/t/p/original" + self.tmdb_data["backdrop_path"]
 
-	def plot(self):
-		return self.tmdb_data['overview']
+    def set(self):
+        try:
+            if "belongs_to_collection" in self.tmdb_data:
+                belongs_to_collection = self.tmdb_data["belongs_to_collection"]
+                if belongs_to_collection and "name" in belongs_to_collection:
+                    return belongs_to_collection["name"]
+        except:
+            pass
 
-	def actors(self):
-		try:
-			cast = self.tmdb_data['credits']['cast']
-		except AttributeError:
-			return []
+        raise AttributeError
 
-		result = []
-		for actor in cast:
-			res = {}
-			res['en_name'] = actor['name']
-			if actor.get('profile_path'):
-				res['photo'] = 'http://image.tmdb.org/t/p/original' + actor['profile_path']
-			if actor.get('character'):
-				res['role'] = actor['character']
-			if actor.get('order'):
-				res['order'] = actor['order']
+    def runtime(self):
+        return self.tmdb_data["runtime"]
 
-			result.append(res)
-		return result
+    def tag(self):
+        return self.tmdb_data["tagline"]
 
-	def genres(self):
-		ll = [g['name'] for g in self.tmdb_data['genres']]
-		return ll
+    def plot(self):
+        return self.tmdb_data["overview"]
 
-	def countries(self):
-		from .countries import ru
-		cc = [c['iso_3166_1'] for c in self.tmdb_data['production_countries']]
-		return [ru(c) for c in cc]
-	
-	def studios(self):
-		ss = [ s['name'] for s in self.tmdb_data['production_companies']]
-		return ss
+    def actors(self):
+        try:
+            cast = self.tmdb_data["credits"]["cast"]
+        except AttributeError:
+            return []
+
+        result = []
+        for actor in cast:
+            res = {}
+            res["en_name"] = actor["name"]
+            if actor.get("profile_path"):
+                res["photo"] = (
+                    "http://image.tmdb.org/t/p/original" + actor["profile_path"]
+                )
+            if actor.get("character"):
+                res["role"] = actor["character"]
+            if actor.get("order"):
+                res["order"] = actor["order"]
+
+            result.append(res)
+        return result
+
+    def genres(self):
+        ll = [g["name"] for g in self.tmdb_data["genres"]]
+        return ll
+
+    def countries(self):
+        from .countries import ru
+
+        cc = [c["iso_3166_1"] for c in self.tmdb_data["production_countries"]]
+        return [ru(c) for c in cc]
+
+    def studios(self):
+        ss = [s["name"] for s in self.tmdb_data["production_companies"]]
+        return ss
+
 
 class MovieAPI(object):
 
-	APIs	= {}
+    APIs = {}
 
-	@staticmethod
-	def get_by(imdb_id = None, kinopoisk_url = None, orig=None, year=None, imdbRaiting=None, settings = None):
+    @staticmethod
+    def get_by(
+        imdb_id=None,
+        kinopoisk_url=None,
+        orig=None,
+        year=None,
+        imdbRaiting=None,
+        settings=None,
+    ):
 
-		if not imdb_id:
-			imdb_id = IDs.get_by_kp(kinopoisk_url) if kinopoisk_url else None
-		if not imdb_id:
-			try:
-				_orig = orig
-				_year = year
+        if not imdb_id:
+            imdb_id = IDs.get_by_kp(kinopoisk_url) if kinopoisk_url else None
+        if not imdb_id:
+            try:
+                _orig = orig
+                _year = year
 
-				if kinopoisk_url:
-					kp = KinopoiskAPI(kinopoisk_url, settings)
-					orig = kp.originaltitle()
-					if not orig:
-						orig = kp.title()
-					year = kp.year()
-					imdb_id = TMDB_API.imdb_by_tmdb_search(orig if orig else _orig, year if year else _year)
+                if kinopoisk_url:
+                    kp = KinopoiskAPI(kinopoisk_url, settings)
+                    orig = kp.originaltitle()
+                    if not orig:
+                        orig = kp.title()
+                    year = kp.year()
+                    imdb_id = TMDB_API.imdb_by_tmdb_search(
+                        orig if orig else _orig, year if year else _year
+                    )
 
-			except BaseException as e:
-				from log import print_tb
-				print_tb(e)
+            except BaseException as e:
+                from log import print_tb
 
-		if imdb_id and kinopoisk_url:
-			IDs.set( imdb_id, kinopoisk_url)
+                print_tb(e)
 
-		if imdb_id and imdb_id in MovieAPI.APIs:
-			return MovieAPI.APIs[imdb_id], imdb_id
-		elif kinopoisk_url and kinopoisk_url in MovieAPI.APIs:
-			return MovieAPI.APIs[kinopoisk_url], imdb_id
+        if imdb_id and kinopoisk_url:
+            IDs.set(imdb_id, kinopoisk_url)
 
-		api = MovieAPI(imdb_id, kinopoisk_url, settings, orig, year)
-		if imdb_id:
-			MovieAPI.APIs[imdb_id] = api
-		elif kinopoisk_url:
-			MovieAPI.APIs[kinopoisk_url] = api
+        if imdb_id and imdb_id in MovieAPI.APIs:
+            return MovieAPI.APIs[imdb_id], imdb_id
+        elif kinopoisk_url and kinopoisk_url in MovieAPI.APIs:
+            return MovieAPI.APIs[kinopoisk_url], imdb_id
 
-		return api, imdb_id
+        api = MovieAPI(imdb_id, kinopoisk_url, settings, orig, year)
+        if imdb_id:
+            MovieAPI.APIs[imdb_id] = api
+        elif kinopoisk_url:
+            MovieAPI.APIs[kinopoisk_url] = api
 
-	def __init__(self, imdb_id = None, kinopoisk = None, settings = None, orig = None, year=None):
+        return api, imdb_id
 
-		self.providers = []
+    def __init__(
+        self, imdb_id=None, kinopoisk=None, settings=None, orig=None, year=None
+    ):
 
-		self.tmdbapi = None
-		self.imdbapi = None 
-		self.kinopoiskapi = None
-		self.worldartapi = None
+        self.providers = []
 
-		self._actors = None
+        self.tmdbapi = None
+        self.imdbapi = None
+        self.kinopoiskapi = None
+        self.worldartapi = None
 
-		if imdb_id:
-			self.tmdbapi = TMDB_API(imdb_id)
-			self.imdbapi = ImdbAPI(imdb_id)
+        self._actors = None
 
-			self.providers = [self.tmdbapi, self.imdbapi]
-			if not self.tmdbapi.tmdb_data:
-				self.providers.remove(self.tmdbapi)
+        if imdb_id:
+            self.tmdbapi = TMDB_API(imdb_id)
+            self.imdbapi = ImdbAPI(imdb_id)
 
-		if kinopoisk:
-			if not settings or settings.use_kinopoisk:
-				self.kinopoiskapi = KinopoiskAPI(kinopoisk, settings)
-				self.providers.append(self.kinopoiskapi)
+            self.providers = [self.tmdbapi, self.imdbapi]
+            if not self.tmdbapi.tmdb_data:
+                self.providers.remove(self.tmdbapi)
 
-		if imdb_id or kinopoisk:
-			if not settings or settings.use_worldart:
-				if not orig:
-					for api in self.providers:
-						try:
-							orig = api.originaltitle()
-							break
-						except:
-							pass
-				try:
-					self.worldartapi = world_art(orig, imdbid=imdb_id, kp_url=kinopoisk)
-					self.providers.append(self.worldartapi)
-				except: 
-					pass
-			
-	def actors(self):
-		if self._actors is not None:
-			return self._actors
+        if kinopoisk:
+            if not settings or settings.use_kinopoisk:
+                self.kinopoiskapi = KinopoiskAPI(kinopoisk, settings)
+                self.providers.append(self.kinopoiskapi)
 
-		actors = []
-		for api in [ self.kinopoiskapi, self.tmdbapi, self.worldartapi ]:
-			if api:
-				a = api.actors()
-				if a:
-					actors.append(a)
+        if imdb_id or kinopoisk:
+            if not settings or settings.use_worldart:
+                if not orig:
+                    for api in self.providers:
+                        try:
+                            orig = api.originaltitle()
+                            break
+                        except:
+                            pass
+                try:
+                    self.worldartapi = world_art(orig, imdbid=imdb_id, kp_url=kinopoisk)
+                    self.providers.append(self.worldartapi)
+                except:
+                    pass
 
-		if len(actors) > 0:
-			self._actors = [ actor.copy() for actor in actors[0] ]
-		else:
-			self._actors = []
+    def actors(self):
+        if self._actors is not None:
+            return self._actors
 
-		for act in self._actors:
-			for variant in actors[1:]:
-				for add in variant:
-					try:
-						if act['en_name'] == add['en_name']:
-							act.update(add)
-					except KeyError:
-						pass
-				
-		return self._actors
+        actors = []
+        for api in [self.kinopoiskapi, self.tmdbapi, self.worldartapi]:
+            if api:
+                a = api.actors()
+                if a:
+                    actors.append(a)
 
-	def __getitem__(self, key):
-		for api in self.providers:
-			try:
-				res = api.__getattribute__(key)
-				if res:
-					return res()
-			except BaseException as e:
-				continue
+        if len(actors) > 0:
+            self._actors = [actor.copy() for actor in actors[0]]
+        else:
+            self._actors = []
 
-		raise AttributeError
+        for act in self._actors:
+            for variant in actors[1:]:
+                for add in variant:
+                    try:
+                        if act["en_name"] == add["en_name"]:
+                            act.update(add)
+                    except KeyError:
+                        pass
 
-	def get(self, key, default=None):
-		try:
-			return self.__getitem__(key)
-		except AttributeError:
-			return default
-		
-	def __getattr__(self, name):
+        return self._actors
 
-		if name.startswith('_') or name in self.__dict__:
-			return object.__getattribute__(self, name)
+    def __getitem__(self, key):
+        for api in self.providers:
+            try:
+                res = api.__getattribute__(key)
+                if res:
+                    return res()
+            except BaseException as e:
+                continue
 
-		for api in self.providers:
-			try:
-				res = api.__getattribute__(name)
-				if res:
-					return res
-			except AttributeError:
-				continue
-		
-		raise AttributeError
+        raise AttributeError
 
-	def ru(self, name):
-		def ru_text(text):
-			if not text:
-				return False
+    def get(self, key, default=None):
+        try:
+            return self.__getitem__(key)
+        except AttributeError:
+            return default
 
-			r = 0
-			nr = 0
-			for ch in text:
-				if ch >= u'А' and ch <= u'Я':
-					r += 1
-				elif ch >= u'а' and ch <= u'я':
-					r += 1
-				else:
-					nr += 1
-			return r > nr
+    def __getattr__(self, name):
 
-		def ru_list(ll):
-			for l in ll:
-				if ru_text(l):
-					return True
-			return False
+        if name.startswith("_") or name in self.__dict__:
+            return object.__getattribute__(self, name)
 
-		for api in self.providers:
-			try:
-				res = api.__getattribute__(name)
-				if res and callable(res):
-					value = res()
-					if isinstance(value, list):
-						if ru_list(value):
-							return value
-					else:
-						if ru_text(value):
-							return value
+        for api in self.providers:
+            try:
+                res = api.__getattribute__(name)
+                if res:
+                    return res
+            except AttributeError:
+                continue
 
-			except AttributeError:
-				continue
-		
-		raise AttributeError
-		
+        raise AttributeError
 
-if __name__ == '__main__':
-	#for res in MovieAPI.search(u'Обитаемый остров'):
-	#	print res.get_info()
+    def ru(self, name):
+        def ru_text(text):
+            if not text:
+                return False
 
-	#for res in MovieAPI.popular_tv():
-	#	print res.get_info()
+            r = 0
+            nr = 0
+            for ch in text:
+                if ch >= "А" and ch <= "Я":
+                    r += 1
+                elif ch >= "а" and ch <= "я":
+                    r += 1
+                else:
+                    nr += 1
+            return r > nr
 
-	#MovieAPI.tmdb_query(
-	#	'http://api.themoviedb.org/3/movie/tt4589186?api_key=f7f51775877e0bb6703520952b3c7840&language=ru')
+        def ru_list(ll):
+            for l in ll:
+                if ru_text(l):
+                    return True
+            return False
 
-	#api = MovieAPI(kinopoisk = 'https://www.kinopoisk.ru/film/894027/')
-	#api = MovieAPI(kinopoisk = 'https://www.kinopoisk.ru/film/257774/')
-	#api = world_art(title=u"Команда Тора")
+        for api in self.providers:
+            try:
+                res = api.__getattribute__(name)
+                if res and callable(res):
+                    value = res()
+                    if isinstance(value, list):
+                        if ru_list(value):
+                            return value
+                    else:
+                        if ru_text(value):
+                            return value
 
-	from settings import Settings
-	settings = Settings('.')
-	settings.kp_usezaborona = True
-	api = KinopoiskAPI('https://www.kinopoisk.ru/film/257774/', settings)
-	title = api.title()
-	
-	api = world_art(u'The Fate of the Furious', year='2017', kp_url='https://www.kinopoisk.ru/film/894027/')
-	info = api.info
-	knowns = info.knowns
-	plot = info.plot
+            except AttributeError:
+                continue
 
-	actors = [act for act in info.actors]
+        raise AttributeError
 
-	pass
+
+if __name__ == "__main__":
+    # for res in MovieAPI.search(u'Обитаемый остров'):
+    # 	print res.get_info()
+
+    # for res in MovieAPI.popular_tv():
+    # 	print res.get_info()
+
+    # MovieAPI.tmdb_query(
+    # 	'http://api.themoviedb.org/3/movie/tt4589186?api_key=f7f51775877e0bb6703520952b3c7840&language=ru')
+
+    # api = MovieAPI(kinopoisk = 'https://www.kinopoisk.ru/film/894027/')
+    # api = MovieAPI(kinopoisk = 'https://www.kinopoisk.ru/film/257774/')
+    # api = world_art(title=u"Команда Тора")
+
+    from settings import Settings
+
+    settings = Settings(".")
+    settings.kp_usezaborona = True
+    api = KinopoiskAPI("https://www.kinopoisk.ru/film/257774/", settings)
+    title = api.title()
+
+    api = world_art(
+        "The Fate of the Furious",
+        year="2017",
+        kp_url="https://www.kinopoisk.ru/film/894027/",
+    )
+    info = api.info
+    knowns = info.knowns
+    plot = info.plot
+
+    actors = [act for act in info.actors]
+
+    pass

@@ -61,10 +61,14 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 		self.close()
 		
 	def _AddTorrent(self, path):
+		try:
+			from xbmc import translatePath
+		except ImportError:
+			from xbmcvfs import translatePath
 
 		if filesystem.exists(path):
 			if path.startswith(r'\\') or '://' in path:
-				tempPath = decode_string(xbmc.translatePath('special://temp'))
+				tempPath = decode_string(translatePath('special://temp'))
 				destPath = filesystem.join(tempPath, 't2h.torrent')
 				filesystem.copyfile(path, destPath)
 				path = destPath
@@ -74,14 +78,13 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 			uri = path
 		self.debug('AddTorrent: ' + uri)
 
-
 		add_trackers = []
 		if getSetting('add_tracker'):
 			add_trackers.append(getSetting('add_tracker'))
 
 		download_path = getSetting('storage_path')
 		if download_path == '':
-			download_path = xbmc.translatePath('special://temp')
+			download_path = translatePath('special://temp')
 			
 		self.debug('download_path: %s' % download_path)	
 		self.download_path = download_path

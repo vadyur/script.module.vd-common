@@ -140,24 +140,26 @@ def save_tvshow(player_video_info):
     hash = Engine.extract_hash_from_play_url(player_video_info.play_url)
     if original_title and year:
         from .info import add_tvshows_to_lib
+        from vdlib.util import compare_urls_ignore_domain
         if add_tvshows_to_lib():
             save_tvshow.playing_strm = None
             def episode_func(filename, play_url):
-                if play_url == player_video_info.play_url:
+                if compare_urls_ignore_domain(play_url, player_video_info.play_url):
                     save_tvshow.playing_strm = filename
                 log(hash)
         
             ts_engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
             save_tvshow_strms(video_info.get('title'), original_title, year, imdb, ts_engine, episode_func=episode_func)
 
-            part_dirname = filesystem.join('TVShows', get_tvshow_dirname(original_title, year))
+            tvshow_dirname = get_tvshow_dirname(original_title, year)
+            part_dirname = filesystem.join('TVShows', tvshow_dirname)
             tvshow_path = make_path_to_base_relative(part_dirname)
 
             def on_update_library():
                 if not save_tvshow.playing_strm:
                     return True
 
-                result = get_episodes_by(part_dirname, save_tvshow.playing_strm)
+                result = get_episodes_by(tvshow_dirname, save_tvshow.playing_strm)
                 episodes = result.get('episodes')
                 if episodes:
                     episode = episodes[0]

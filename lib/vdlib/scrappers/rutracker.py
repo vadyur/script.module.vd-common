@@ -59,13 +59,13 @@ class RuTrackerBase(object):
             xbmc.log(self.settings.rt_cookies)
             return False
         """
-        resp = session.get('http://%s/forum/index.php' % self.baseurl, cookies=js)
+        resp = session.get('https://%s/forum/index.php' % self.baseurl, cookies=js)
         if re.compile('<input.+?type="text" name="login_username"').search(resp.text):
             return False
         return True
 
     def login(self, session):
-        pageContent = session.get('http://%s/forum/login.php' % (self.baseurl))
+        pageContent = session.get('https://%s/forum/login.php' % (self.baseurl))
         captchaMatch = re.compile(
             '(//static\.t-ru\.org/captcha/\d+/\d+/[0-9a-f]+\.jpg\?\d+).+?name="cap_sid" value="(.+?)".+?name="(cap_code_[0-9a-f]+)"',
             re.DOTALL | re.MULTILINE).search(pageContent.text)
@@ -86,7 +86,7 @@ class RuTrackerBase(object):
                 return False
             
         r = session.post(
-            'http://%s/forum/login.php' % self.baseurl,
+            'https://%s/forum/login.php' % self.baseurl,
             data=data,
             allow_redirects = False
         )
@@ -105,10 +105,10 @@ class RuTrackerBase(object):
 
     def torrent_download(self, url, path):
         t = re.search('(\d+)$', url).group(1)
-        referer = 'http://%s/forum/viewtopic.php?t=%s' % (self.baseurl, t)
+        referer = 'https://%s/forum/viewtopic.php?t=%s' % (self.baseurl, t)
         headers = {'Referer': referer,
                     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 YaBrowser/15.10.2454.3658 Safari/537.36',
-                    'Origin': 'http://%s' % self.baseurl, 
+                    'Origin': 'https://%s' % self.baseurl, 
                     'Upgrade-Insecure-Requests': '1'
                     }
         data = { 't': t	}
@@ -125,7 +125,7 @@ class RuTrackerBase(object):
         if not self.check_settings():
             return
 
-        url = 'http://{}/forum/tracker.php?nm={}'.format(
+        url = 'https://{}/forum/tracker.php?nm={}'.format(
             self.baseurl,
             quote_plus(title)
         )
@@ -157,7 +157,7 @@ class RuTrackerBase(object):
                     'seeds': seeds,
                     'leechers': tr.find('td', class_='leechmed').get_text(),
                     'size': td_dl.get_text().strip(u'\n ↓'),
-                    'dl_link': 'http://%s/forum/' % self.baseurl + dl_link
+                    'dl_link': 'https://%s/forum/' % self.baseurl + dl_link
                 }        
 
 

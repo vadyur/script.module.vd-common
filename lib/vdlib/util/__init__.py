@@ -1,11 +1,11 @@
 import sys
 if sys.version_info >= (3, 0):
     from urllib.error import URLError, HTTPError
-    from urllib.parse import urljoin, urlparse, urlunparse, urlencode, ParseResult, quote, quote_plus, unquote_plus
+    from urllib.parse import urljoin, urlparse, urlunparse, urlencode, ParseResult, quote, quote_plus, unquote_plus, parse_qs
     from urllib.request import pathname2url
     from urllib.request import urlopen
 else:
-    from urlparse import urljoin, urlparse, urlunparse, ParseResult
+    from urlparse import urljoin, urlparse, urlunparse, ParseResult, parse_qs
     from urllib import pathname2url, quote, quote_plus, unquote_plus
     from urllib2 import urlopen, quote, URLError, HTTPError
 

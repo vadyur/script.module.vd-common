@@ -768,16 +768,59 @@ class imdb_cast(soup_base):
 
 
 class ImdbAPI(object):
-    headers = {"Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"}
+    headers = {"Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+                "referer": 'https://www.google.com/',
+                "sec-ch-ua": '"Not?A_Brand";v="99", "Opera";v="97", "Chromium";v="111"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "Windows",
+                "sec-fetch-dest": "document",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "same-origin",
+                "sec-fetch-user": "?1",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36"
+               }
+    
+    script_begin = '<script type="application/ld+json">'
+    script_end='</script>'
 
     def __init__(self, imdb_id):
 
-        resp = requests.get(
-            "http://www.imdb.com/title/" + imdb_id + "/", headers=self.headers
+        self.resp = requests.get(
+            "https://www.imdb.com/title/" + imdb_id + "/", headers=self.headers
         )
-        if resp.status_code == requests.codes.ok:
-            text = clean_html(resp.content)
-            self.page = BeautifulSoup(text, "html.parser")
+
+        self._json = None
+        self._page = None
+
+    @property
+    def page(self):
+        if self._page:
+            return self._page
+        
+        if self.resp.status_code == requests.codes.ok:
+            text = clean_html(self.resp.content)
+            self._page = BeautifulSoup(text, "html.parser")
+            return self._page
+
+    @property
+    def content(self):
+        if self.resp.status_code == requests.codes.ok:
+            return self.resp.content
+
+    @property
+    def json(self):
+        if self._json:
+            return self._json
+
+        lines = self.content.splitlines()
+        for line in lines:
+            string = line.decode('utf-8')
+            if self.script_begin in string and '"@context"' in string:
+                string = string.split(self.script_begin)[-1]
+                string = string.split(self.script_end)[0]
+                self._json = json.loads(string)
+                return self._json
 
     def year(self):
         a = self.page.find("a", href=re.compile(r"releaseinfo\?ref_=tt_ov_rdat"))
@@ -788,22 +831,13 @@ class ImdbAPI(object):
             raise AttributeError
 
     def rating(self):
-        span = self.page.find(
-            "span", class_=re.compile(r"AggregateRatingButton__RatingScore")
-        )
-        if span:
-            return span.get_text().replace(",", ".")
-        else:
-            raise AttributeError
+        jsn = self.json
+        return str(jsn['aggregateRating']['ratingValue'])
 
     def runtime(self):
-        div = self.page.find(
-            "div", class_=re.compile(r"TitleBlock__TitleMetaDataContainer")
-        )
-        for li in div.find_all("li"):
-            if re.match(r"\d+(h|min)", li.get_text()):
-                return li.get_text()
-        raise AttributeError
+        duration = self.json['duration']
+        duration = duration.replace('PT', '').replace('H', 'h ').replace('M', 'm')
+        return duration
 
     def mpaa(self):
         pattern = r"/title/tt\d+/parentalguide/certificates"
@@ -814,29 +848,12 @@ class ImdbAPI(object):
             raise AttributeError
 
     def title(self):
-        from ..util.string import uni_type
-
-        h1 = self.page.find("h1", class_=re.compile(r"TitleHeader__TitleText"))
-        if h1:
-            return uni_type(h1.contents[0]).replace("\xa0", " ").strip()
-        else:
-            raise AttributeError
+        result = self.json['alternateName']
+        return result
 
     def originaltitle(self):
-        from ..util.string import uni_type
-
-        div = self.page.find(
-            "div", class_=re.compile(r"OriginalTitle__OriginalTitleText")
-        )
-        if div:
-            return (
-                uni_type(div.contents[0])
-                .replace("\xa0", " ")
-                .strip()
-                .replace("Original title: ", "")
-            )
-        else:
-            raise AttributeError
+        result = self.json['name']
+        return result
 
     def type(self):
         a = self.page.find("a", href=re.compile(r"/title/tt\d+/episodes"))

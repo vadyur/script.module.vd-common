@@ -6,7 +6,9 @@ from .string import decode_string
 from . import log
 try:
 	import xbmcvfs
-except ImportError: 
+	use_xbmcvfs = not hasattr(xbmcvfs, '__kodistubs__')
+except ImportError:
+	use_xbmcvfs = False
 	pass
 
 try:
@@ -65,9 +67,7 @@ def test_path(path):
 def _get_path(path, use_unc_path=True):
 	errors='strict'
 
-	try:
-		import xbmcvfs
-	except ImportError:
+	if not use_xbmcvfs:
 		if path.startswith('smb://') and os.name == 'nt' and use_unc_path:
 			path = path.replace('smb://', r'\\').replace('/', '\\')
 
@@ -100,13 +100,13 @@ def xbmcvfs_path(path):
 
 def exists(path):
 	def xbmcvfs_exists(path):
-		try:
+		if use_xbmcvfs:
 			import stat
 			if stat.S_ISDIR(xbmcvfs.Stat(xbmcvfs_path(path)).st_mode()):
 				return True
 			return xbmcvfs.exists(xbmcvfs_path(path))
-		except NameError:
-			return os_path_exists(translatePath(path))
+		else:
+			return os_path_exists(path)
 
 	def os_path_exists(path):
 		if path.startswith('smb://') and os.name == 'nt':
@@ -136,9 +136,9 @@ def getcwd():
 
 
 def makedirs(path):
-	try:
+	if use_xbmcvfs:
 		return xbmcvfs.mkdirs(xbmcvfs_path(path))
-	except (ImportError, NameError):
+	else:
 		os.makedirs(real_path(path))
 
 
@@ -193,10 +193,10 @@ def isfile(path):
 		return False
 		#raise Exception('sfile.isFile error %s does not exists' % path)
 
-	try:
+	if use_xbmcvfs:
 		import stat
 		return stat.S_ISREG(xbmcvfs.Stat(xbmcvfs_path(path)).st_mode())
-	except (ImportError, NameError):
+	else:
 		return os.path.isfile(real_path(path))
 
 
@@ -215,9 +215,7 @@ def normpath(path):
 
 	
 def fopen(path, mode):
-	try:
-		import xbmcvfs
-
+	if use_xbmcvfs:
 		try:
 			from StringIO import StringIO	# type: ignore
 		except ImportError:
@@ -286,8 +284,7 @@ def fopen(path, mode):
 			return File(path, 'w')
 		else:
 			return File(path, mode)
-
-	except BaseException:
+	else:
 		return open(real_path(path), mode)
 
 	
@@ -304,13 +301,13 @@ def join(path, *paths):
 
 def listdir(path):
 	ld = []
-	try:
+	if use_xbmcvfs:
 		dirs, files = xbmcvfs.listdir(xbmcvfs_path(path))
 		for d in dirs:
 			ld.append(d.decode('utf-8'))
 		for f in files:
 			ld.append(f.decode('utf-8'))
-	except:
+	else:
 		path = get_path(path)
 		if path.startswith(r'\\'):
 			with save_make_chdir_context(path, 'filesystem'):
@@ -324,41 +321,41 @@ def listdir(path):
 
 
 def remove(path):
-	try:
+	if use_xbmcvfs:
 		xbmcvfs.delete(xbmcvfs_path(path))
-	except:
+	else:
 		os.remove(real_path(path))
 
 
 def copyfile(src, dst):
-	try:
+	if use_xbmcvfs:
 		xbmcvfs.copy(xbmcvfs_path(src), xbmcvfs_path(dst))
-	except:
+	else:
 		import shutil
 		shutil.copyfile(real_path(src), real_path(dst))
 
 
 def movefile(src, dst):
-	try:
+	if use_xbmcvfs:
 		xbmcvfs.rename(xbmcvfs_path(src), xbmcvfs_path(dst))
-	except:
+	else:
 		import shutil
 		shutil.move(real_path(src), real_path(dst))
 
 
 def getmtime(path):
-	try:
+	if use_xbmcvfs:
 		import stat
 		return xbmcvfs.Stat(xbmcvfs_path(path)).st_mtime()
-	except (ImportError, NameError):
+	else:
 		return os.path.getmtime(real_path(path))
 
 
 def getctime(path):
-	try:
+	if use_xbmcvfs:
 		import stat
 		return xbmcvfs.Stat(xbmcvfs_path(path)).st_ctime()
-	except (ImportError, NameError):
+	else:
 		return os.path.getctime(real_path(path))
 
 

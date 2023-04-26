@@ -42,6 +42,10 @@ def save_movie_strm(play_url, sort_index, original_title, year):
     name = u'{} ({})'.format(
                 decode_string(original_title),
                 year)
+
+    from vdlib.kodi.compat import makeLegalFilename
+    name = makeLegalFilename(name)
+
     log(u'name is {}'.format(name))
     playing_strm = make_path_to_base_relative(u'Movies/' + name + u'.strm')
     save_strm(playing_strm, play_url, sort_index)
@@ -89,9 +93,6 @@ def update_library(path=None, on_update=None):
 def save_strm(file_path, play_url, sort_index):
     # action="play_now", magnet=magneturi, selFile=0
     from vdlib.util import urlencode
-    from vdlib.kodi.compat import makeLegalFilename
-
-    file_path = makeLegalFilename(file_path)
 
     log(u'def save_strm(file_path, play_url)')
     log(u'file_path is "{}"'.format(file_path))
@@ -113,6 +114,10 @@ def save_strm(file_path, play_url, sort_index):
     )
 
     log('link is {}'.format(link))
+
+    dir_path = filesystem.dirname(file_path)
+    if not filesystem.exists(dir_path):
+        filesystem.makedirs(dir_path)
 
     with filesystem.fopen(file_path, 'w') as out:
         out.write(link)
@@ -200,7 +205,7 @@ def save_tvshow_strms(title, original_title, year, imdb, ts_engine, episode_func
         season_path = filesystem.join(tvshow_path, u'Season {}'.format(item['season']))
         if not filesystem.exists(season_path):
             filesystem.makedirs(season_path)
-        filename = u'{} ({}) S{:02d}E{:02d}.strm'.format(original_title, year, item['season'], item['episode'])
+        filename = get_tvshow_filename(original_title, year, item['season'], item['episode'])
         sort_index = item['index']
         play_url = ts_engine.play_url(sort_index, torrent_stat=ts_stat)
         strm_path = filesystem.join(season_path, filename)
@@ -210,10 +215,20 @@ def save_tvshow_strms(title, original_title, year, imdb, ts_engine, episode_func
 
 
 def get_tvshow_dirname(original_title, year):
+    from vdlib.kodi.compat import makeLegalFilename
+
     tvshow_dirname = u'{} ({})'.format(original_title, year)
+    tvshow_dirname = makeLegalFilename(tvshow_dirname)
     log(tvshow_dirname)
     return tvshow_dirname
 
+def get_tvshow_filename(original_title, year, season, episode):
+    from vdlib.kodi.compat import makeLegalFilename
+
+    filename = u'{} ({}) S{:02d}E{:02d}.strm'.format(original_title, year, season, episode)
+    filename = makeLegalFilename(filename)
+    log(filename)
+    return filename
 
 def get_episodes_by(dirname, filename, fields=["file"]):
     filter = find_file_filter(dirname, filename)

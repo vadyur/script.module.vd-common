@@ -70,18 +70,12 @@ def save_video_info(hash, video_info):
     log('---TorrSpy: save_info---')
 
     with filesystem.fopen(get_video_info_path(hash, create_path=True), 'w') as vi_out: 
-        try:
-            json.dump(video_info, vi_out, indent=4, ensure_ascii=False)
-        except UnicodeEncodeError:
-            json.dump(video_info, vi_out, indent=4)
+        json.dump(video_info, vi_out, indent=4)
 
 def save_art(hash, art):
     if art:
         with filesystem.fopen(get_art_path(hash, create_path=True), 'w') as a_out:
-            try:
-                json.dump(art, a_out, indent=4, ensure_ascii=False)
-            except UnicodeEncodeError:
-                json.dump(art, a_out, indent=4)
+            json.dump(art, a_out, indent=4)
 
 def get_art_path(hash, create_path=False):
     path = make_path_to_base_relative('.data')
@@ -101,7 +95,10 @@ def load_video_info(hash):
     video_info_path = get_video_info_path(hash)
     if filesystem.exists(video_info_path):
         with filesystem.fopen(video_info_path, 'r') as vi_in:
-            return json.load(vi_in)
+            result = json.load(vi_in)
+            if result:
+                return result
+    return {}
 
 def load_art(hash):
     art_path = get_art_path()

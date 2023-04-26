@@ -76,6 +76,13 @@ def clean_part(part):
 def clean_title(part):
     part = clean_part(part)
     part = re.sub(r'\(.+?\)', '', part)
+    part = part.replace('.', ' ')
+
+    part = re.sub(r'[Ss]\d\d.+', '', part)
+    part = re.sub(r'\w{2,3}Rip.+', '', part)
+    part = re.sub(r'1080.+', '', part)
+    part = re.sub(r'WEB-DL.+', '', part)
+
     return part.strip()
 
 def _extract_KT_title_year(title):
@@ -88,7 +95,7 @@ def _find_date_period(source):
     m = re.search(r'/ (19[0-9][0-9]|20[0-9][0-9])\s*-\s*(19[0-9][0-9]|20[0-9][0-9]) /', source)    
     if m:
         return m.group(1), m.group(2)
-
+    
 def extract_original_title_year(title):
     source = title
     year = None
@@ -98,6 +105,7 @@ def extract_original_title_year(title):
     if video_info:
         return video_info
 
+    title = clean_title(title)
     if '/' in source:
         parts = source.split('/')
         title = clean_title(parts[0])
@@ -137,6 +145,7 @@ def extract_original_title_year(title):
         video_info['originaltitle'] = original_title.strip()
     if year:
         video_info['year'] = year
+        video_info['title'] = video_info['title'].replace(year, '').strip()
     return video_info
 
 def extract_filename(url):

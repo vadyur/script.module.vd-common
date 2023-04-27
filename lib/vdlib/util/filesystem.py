@@ -383,6 +383,21 @@ def normseps(path):
 
 	return path
 
+def makeLegalFilename(filename):
+	# type: (str) -> str
+
+	if '\\' in filename or '/' in filename:
+		raise ValueError('ERROR!!! "{}" has directory separators'.format(filename))
+
+	# type: (str) -> str
+	illegal_chars = [ ':', '*', '?', '<', '>', '|', '"' ]
+
+	for ch in illegal_chars:
+		filename = filename.replace(ch, '')
+	
+	return ensure_unicode(filename.rstrip(' .'))
+
+
 def test():	
 
 	tst_name = u'/storage/mnt/D/MA/Videos/TVShows/Звездный путь Дискавери\\Season 2\\10. episode_s02e10.strm'

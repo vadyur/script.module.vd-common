@@ -304,9 +304,9 @@ def listdir(path):
 	if use_xbmcvfs:
 		dirs, files = xbmcvfs.listdir(xbmcvfs_path(path))
 		for d in dirs:
-			ld.append(d.decode('utf-8'))
+			ld.append(ensure_unicode(d))
 		for f in files:
-			ld.append(f.decode('utf-8'))
+			ld.append(ensure_unicode(f))
 	else:
 		path = get_path(path)
 		if path.startswith(r'\\'):

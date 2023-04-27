@@ -43,8 +43,7 @@ def save_movie_strm(play_url, sort_index, original_title, year):
                 decode_string(original_title),
                 year)
 
-    from vdlib.kodi.compat import makeLegalFilename
-    name = makeLegalFilename(name)
+    name = filesystem.makeLegalFilename(name)
 
     log(u'name is {}'.format(name))
     playing_strm = make_path_to_base_relative(u'Movies/' + name + u'.strm')
@@ -215,18 +214,14 @@ def save_tvshow_strms(title, original_title, year, imdb, ts_engine, episode_func
 
 
 def get_tvshow_dirname(original_title, year):
-    from vdlib.kodi.compat import makeLegalFilename
-
     tvshow_dirname = u'{} ({})'.format(original_title, year)
-    tvshow_dirname = makeLegalFilename(tvshow_dirname)
+    tvshow_dirname = filesystem.makeLegalFilename(tvshow_dirname)
     log(tvshow_dirname)
     return tvshow_dirname
 
 def get_tvshow_filename(original_title, year, season, episode):
-    from vdlib.kodi.compat import makeLegalFilename
-
     filename = u'{} ({}) S{:02d}E{:02d}.strm'.format(original_title, year, season, episode)
-    filename = makeLegalFilename(filename)
+    filename = filesystem.makeLegalFilename(filename)
     log(filename)
     return filename
 

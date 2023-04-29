@@ -280,10 +280,13 @@ def fopen(path, mode):
 			def size(self):
 				return self.len
 
-		if 'w' in mode:
-			return File(path, 'w')
-		else:
-			return File(path, mode)
+		try:
+			if 'w' in mode:
+				return File(path, 'w')
+			else:
+				return File(path, mode)
+		except UnicodeDecodeError:
+			return open(real_path(path), mode)
 	else:
 		return open(real_path(path), mode)
 

@@ -247,3 +247,10 @@ def set_episode_resume_playcount(episodeid, player_video_info):
         else:
             result = VideoLibrary.SetEpisodeDetails(episodeid=episodeid,playcount=1)
     pass
+
+def get_hash_from_strm(path):
+    with filesystem.fopen(path, 'r') as strm:
+        content = strm.read()
+        from torrserve_stream import Engine
+        hash = Engine.extract_hash_from_play_url(content)
+        return hash

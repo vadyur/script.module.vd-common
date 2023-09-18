@@ -39,8 +39,10 @@ def create_list_item(item):
     if item.get('stream_info'):
         for stream, stream_info in item['stream_info'].items():
             list_item.addStreamInfo(stream, stream_info)
+    cast = None
     if item.get('info'):
         for media, info in item['info'].items():
+            cast = info.pop('cast', None)
             list_item.setInfo(media, info)
     if item.get('context_menu') is not None:
         list_item.addContextMenuItems(item['context_menu'])
@@ -52,7 +54,6 @@ def create_list_item(item):
         for key, value in item['properties'].items():
             list_item.setProperty(key, value)
     if major_version >= '17':
-        cast = item.get('cast')
         if cast is not None:
             list_item.setCast(cast)
         db_ids = item.get('online_db_ids')
@@ -105,7 +106,7 @@ def create_listing(listing, succeeded=True, update_listing=False, cache_to_disk=
             else:
                 raise TypeError(
                     'method parameter must be of int or dict type!')
-                
+
     xbmcplugin.endOfDirectory(_handle,
                                 succeeded,
                                 update_listing,

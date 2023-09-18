@@ -780,7 +780,7 @@ class ImdbAPI(object):
                 "upgrade-insecure-requests": "1",
                 "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36"
                }
-    
+
     script_begin = '<script type="application/ld+json">'
     script_end='</script>'
 
@@ -797,7 +797,7 @@ class ImdbAPI(object):
     def page(self):
         if self._page:
             return self._page
-        
+
         if self.resp.status_code == requests.codes.ok:
             text = clean_html(self.resp.content)
             self._page = BeautifulSoup(text, "html.parser")
@@ -1184,17 +1184,26 @@ class TMDB_API(object):
             for item in zip(en, ru)
         ]
 
-    def __init__(self, imdb_id=None):
+    def __init__(self, imdb_id=None, tmdb_id=None, type=None, append_to_response='credits'):
+        url_ = None
         if imdb_id:
             url_ = TMDB_API.url_imdb_id(imdb_id)
-            try:
-                if url_:
-                    self.tmdb_data = json.load(urlopen(url_))
-                    debug("tmdb_data (" + url_ + ") \t\t\t[Ok]")
-                else:
-                    self.tmdb_data = None
-            except:
+        elif tmdb_id:
+            url_ = "http://%s/3/" % TMDB_API.tmdb_api_key["host"] \
+                    + type  \
+                    + "/" \
+                    + str(tmdb_id) \
+                    + "?api_key=" \
+                    + TMDB_API.tmdb_api_key["key"] \
+                    + "&language=ru&append_to_response=" + append_to_response
+        try:
+            if url_:
+                self.tmdb_data = json.load(urlopen(url_))
+                debug("tmdb_data (" + url_ + ") \t\t\t[Ok]")
+            else:
                 self.tmdb_data = None
+        except:
+            self.tmdb_data = None
 
     def title(self):
         try:

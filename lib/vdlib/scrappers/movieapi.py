@@ -8,7 +8,7 @@ from ..util import urlopen
 import json, re
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from ..util.base import clean_html
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.100"
@@ -45,7 +45,7 @@ def get_tmdb_api_key():
             content = xml.read()
             match = re.search(r"api_key=(\w+)", content)
             if match:
-                key = match.group(1)
+                key: str = match.group(1)
                 debug("get_tmdb_api_key: ok")
 
             m = re.search(r"://(.+)/3/", content)
@@ -160,7 +160,7 @@ class world_art_actors(world_art_soup):
 
                     # act = { k:v for k, v in act.iteritems() if v }		## No python 2.6 compatible
                     res = {}
-                    for k, v in act.iteritems():
+                    for k, v in act.items():
                         if v:
                             res[k] = v
 
@@ -500,7 +500,7 @@ class KinopoiskAPI(object):
     def __init__(self, kinopoisk_url=None, settings=None):
         from settings import Settings
 
-        self.settings = settings if settings else Settings("")
+        self.settings = settings if settings else Settings()
         self.kinopoisk_url = kinopoisk_url
         self.soup = None
         self._actors = None
@@ -755,16 +755,17 @@ class imdb_cast(soup_base):
 
     @property
     def actors(self):
-        if not self._actors:
-            tbl = self.soup.find("table", class_="cast_list")
-            if tbl:
-                for tr in tbl.find("tr"):
-                    if "class" in tr:
-                        act = {}
-                        # https://images-na.ssl-images-amazon.com/images/M/MV5BMTkxMzk2MDkwOV5BMl5BanBnXkFtZTcwMDAxODQwMg@@._V1_UX32_CR0,0,32,44_AL_.jpg
-                        # https://images-na.ssl-images-amazon.com/images/M/MV5BMjExNzA4MDYxN15BMl5BanBnXkFtZTcwOTI1MDAxOQ@@._V1_SY1000_CR0,0,721,1000_AL_.jpg
-                        # https://images-na.ssl-images-amazon.com/images/M/MV5BMjExNzA4MDYxN15BMl5BanBnXkFtZTcwOTI1MDAxOQ@@._V1_UY317_CR7,0,214,317_AL_.jpg
-                        # img = tr.find('img')
+        #if not self._actors:
+        #    tbl = self.soup.find("table", class_="cast_list")
+        #    if tbl and isinstance(tbl, Tag):
+        #        for tr in tbl.find("tr"):
+        #            if "class" in tr:
+        #                act = {}
+        #                # https://images-na.ssl-images-amazon.com/images/M/MV5BMTkxMzk2MDkwOV5BMl5BanBnXkFtZTcwMDAxODQwMg@@._V1_UX32_CR0,0,32,44_AL_.jpg
+        #                # https://images-na.ssl-images-amazon.com/images/M/MV5BMjExNzA4MDYxN15BMl5BanBnXkFtZTcwOTI1MDAxOQ@@._V1_SY1000_CR0,0,721,1000_AL_.jpg
+        #                # https://images-na.ssl-images-amazon.com/images/M/MV5BMjExNzA4MDYxN15BMl5BanBnXkFtZTcwOTI1MDAxOQ@@._V1_UY317_CR7,0,214,317_AL_.jpg
+        #                # img = tr.find('img')
+        return self._actors
 
 
 class ImdbAPI(object):
@@ -807,6 +808,7 @@ class ImdbAPI(object):
     def content(self):
         if self.resp.status_code == requests.codes.ok:
             return self.resp.content
+        return b''
 
     @property
     def json(self):
@@ -822,8 +824,10 @@ class ImdbAPI(object):
                 self._json = json.loads(string)
                 return self._json
 
+        return {}
+
     def year(self):
-        a = self.page.find("a", href=re.compile(r"releaseinfo\?ref_=tt_ov_rdat"))
+        a = self.page.find("a", href=re.compile(r"releaseinfo\?ref_=tt_ov_rdat")) if self.page else None
         if a:
             result = a.get_text()
             return result[:4]
@@ -832,7 +836,7 @@ class ImdbAPI(object):
 
     def rating(self):
         jsn = self.json
-        return str(jsn['aggregateRating']['ratingValue'])
+        return str(jsn['aggregateRating']['ratingValue']) if jsn else 0
 
     def runtime(self):
         duration = self.json['duration']
@@ -841,7 +845,7 @@ class ImdbAPI(object):
 
     def mpaa(self):
         pattern = r"/title/tt\d+/parentalguide/certificates"
-        a = self.page.find("a", href=re.compile(pattern))
+        a = self.page.find("a", href=re.compile(pattern)) if self.page else None
         if a:
             return a.get_text()
         else:
@@ -856,7 +860,7 @@ class ImdbAPI(object):
         return result
 
     def type(self):
-        a = self.page.find("a", href=re.compile(r"/title/tt\d+/episodes"))
+        a = self.page.find("a", href=re.compile(r"/title/tt\d+/episodes")) if self.page else None
         return "tvshow" if a else "movie"
 
 
@@ -1014,9 +1018,8 @@ class TMDB_API(object):
             __nonzero__ = __bool__
 
         result = tmdb_query_result()
+        from ..util import HTTPError
         try:
-            from ..util import HTTPError
-
             debug("Request is: " + url)
             data = json.load(urlopen(url))
             debug("data is: {}".format(data))
@@ -1188,7 +1191,7 @@ class TMDB_API(object):
         url_ = None
         if imdb_id:
             url_ = TMDB_API.url_imdb_id(imdb_id)
-        elif tmdb_id:
+        elif tmdb_id and type:
             url_ = "http://%s/3/" % TMDB_API.tmdb_api_key["host"] \
                     + type  \
                     + "/" \
@@ -1201,9 +1204,9 @@ class TMDB_API(object):
                 self.tmdb_data = json.load(urlopen(url_))
                 debug("tmdb_data (" + url_ + ") \t\t\t[Ok]")
             else:
-                self.tmdb_data = None
+                self.tmdb_data = {}
         except:
-            self.tmdb_data = None
+            self.tmdb_data = {}
 
     def title(self):
         try:
@@ -1500,22 +1503,22 @@ if __name__ == "__main__":
     # api = MovieAPI(kinopoisk = 'https://www.kinopoisk.ru/film/257774/')
     # api = world_art(title=u"Команда Тора")
 
-    from settings import Settings
-
-    settings = Settings(".")
-    settings.kp_usezaborona = True
-    api = KinopoiskAPI("https://www.kinopoisk.ru/film/257774/", settings)
-    title = api.title()
-
-    api = world_art(
-        "The Fate of the Furious",
-        year="2017",
-        kp_url="https://www.kinopoisk.ru/film/894027/",
-    )
-    info = api.info
-    knowns = info.knowns
-    plot = info.plot
-
-    actors = [act for act in info.actors]
-
+    #from settings import Settings
+    #
+    #settings = Settings()
+    #settings.kp_usezaborona = True
+    #api = KinopoiskAPI("https://www.kinopoisk.ru/film/257774/", settings)
+    #title = api.title()
+    #
+    #api = world_art(
+    #    "The Fate of the Furious",
+    #    year="2017",
+    #    kp_url="https://www.kinopoisk.ru/film/894027/",
+    #)
+    #info = api.info
+    #knowns = info.knowns
+    #plot = info.plot
+    #
+    #actors = [act for act in info.actors]
+    #
     pass

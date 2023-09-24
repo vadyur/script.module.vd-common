@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from typing import Optional
 from ..util import log
 from ..util.log import debug
 
@@ -255,8 +256,9 @@ class world_art_info(world_art_soup):
 
     @property
     def kp_url(self):
-        a = self.soup.select("a[href*=kinopoisk.ru]")
-        return a[0]["href"]
+        for a in self.soup.find_all('a', attrs={'target': "_blank"}):
+            if 'kinopoisk.ru' in a.get('href', ''):
+                return a["href"].replace('http://', 'https://')
 
     @property
     def plot(self):
@@ -284,7 +286,7 @@ class world_art(world_art_soup):
         self._info = None
 
     @property
-    def info(self):
+    def info(self) -> world_art_info:
         if not self._info:
             results = self.search_by_title(self._title)
 
@@ -322,7 +324,7 @@ class world_art(world_art_soup):
         if self._info == "No info":
             raise AttributeError
 
-        return self._info
+        return self._info   # type: ignore
 
     def search_by_title(self, title):
         result = []

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Optional
+from typing import List, Optional, TypedDict
 from ..util import log
 from ..util.log import debug
 
@@ -935,6 +935,20 @@ class KinopoiskAPI2(KinopoiskAPI):
     def poster(self):
         return "https://st.kp.yandex.net/images/film_big/{}.jpg".format(self.kp_id)
 
+class TMDB_Episode(TypedDict):
+    air_date: str
+    episode_number: int
+    episode_type: str
+    id: int
+    name: str
+    overview: str
+    production_code: str
+    runtime: int
+    season_number: int
+    show_id: int
+    still_path: str
+    vote_average: float
+    vote_count: int
 
 class TMDB_API(object):
     api_url = "https://api.themoviedb.org/3"
@@ -1298,6 +1312,13 @@ class TMDB_API(object):
         ss = [s["name"] for s in self.tmdb_data["production_companies"]]
         return ss
 
+    def episodes(self, season_number: int) -> List[TMDB_Episode]:
+        key = f"season/{season_number}"
+        try:
+            result = self.tmdb_data[key]['episodes']
+        except KeyError:
+            return []
+        return result
 
 class MovieAPI(object):
 

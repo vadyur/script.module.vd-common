@@ -461,10 +461,11 @@ class tmdb_movie_item(object):
 
         created_by = self.json_data_.get("created_by")
         if created_by:
-            persons = []
-            for person in created_by:
-                persons.append(person["name"])
-            info["director"] = persons
+            info["director"] = [person["name"] for person in created_by]
+        else:
+            crew = self.json_data_.get("credits", {}).get("crew")
+            if crew:
+                info["director"] = [person["name"] for person in crew if person["job"] == "Director"]
 
         production_companies = self.json_data_.get("production_companies")
         if production_companies:

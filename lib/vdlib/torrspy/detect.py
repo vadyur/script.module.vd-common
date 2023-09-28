@@ -37,7 +37,7 @@ def extract_title_date(filename):
     if m:
         title = m.group(1)
         date = m.group(2)
-    else:        
+    else:
         date = None
 
     for clinning_re in cleanstrings:
@@ -92,10 +92,10 @@ def _extract_KT_title_year(title):
         return { 'title': m.group(1), 'year': m.group(2) }
 
 def _find_date_period(source):
-    m = re.search(r'/ (19[0-9][0-9]|20[0-9][0-9])\s*-\s*(19[0-9][0-9]|20[0-9][0-9]) /', source)    
+    m = re.search(r'/ (19[0-9][0-9]|20[0-9][0-9])\s*-\s*(19[0-9][0-9]|20[0-9][0-9]) /', source)
     if m:
         return m.group(1), m.group(2)
-    
+
 def extract_original_title_year(title):
     source = title
     year = None
@@ -164,6 +164,12 @@ def test(url):
     r = from_translit(t)
 
     return n, t, d, r
+
+def get_tmdb_movie_item(imdbnumber):
+    from vdlib.scrappers.movieapi import TMDB_API, tmdb_movie_item
+    tmdb = TMDB_API(imdb_id=imdbnumber)
+    result = tmdb_movie_item(tmdb.tmdb_data)
+    return result
 
 def find_tmdb_movie_item(video_info):
     from vdlib.scrappers.movieapi import TMDB_API, tmdb_movie_item

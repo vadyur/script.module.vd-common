@@ -31,8 +31,8 @@ def create_list_item(item):
         if cont_look is not None:
             list_item.setContentLookup(cont_look)
     else:
-        list_item.setThumbnailImage(item.get('thumb', ''))
-        list_item.setIconImage(item.get('icon', ''))
+        list_item.setThumbnailImage(item.get('thumb', '')) # type: ignore
+        list_item.setIconImage(item.get('icon', '')) # type: ignore
         list_item.setProperty('fanart_image', item.get('fanart', ''))
     if item.get('art'):
         list_item.setArt(item['art'])

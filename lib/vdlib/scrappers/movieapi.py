@@ -446,22 +446,36 @@ class tmdb_movie_item(object):
             pass
 
         string_items = [
-            "director",
             "mpaa",
             "title",
             "originaltitle",
             "duration",
-            "studio",
             "code",
             "album",
-            "votes",
-            "thumb",
         ]
         for item in string_items:
             if item in self.json_data_:
                 info[item] = self.json_data_[item]
 
         #  'credits',
+
+        created_by = self.json_data_.get("created_by")
+        if created_by:
+            persons = []
+            for person in created_by:
+                persons.append(person["name"])
+            info["director"] = persons
+
+        production_companies = self.json_data_.get("production_companies")
+        if production_companies:
+            companies = []
+            for company in production_companies:
+                companies.append(company["name"])
+            info["studio"] = companies
+
+        vote_average = self.json_data_.get("vote_average")
+        if vote_average:
+            info["rating"] = vote_average
 
         return info
 

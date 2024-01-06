@@ -145,7 +145,7 @@ def extract_original_title_year(title):
         video_info['originaltitle'] = original_title.strip()
     if year:
         video_info['year'] = year
-        video_info['title'] = video_info['title'].replace(year, '').strip()
+        video_info['title'] = video_info['title'].split(year)[0].strip()
     return video_info
 
 def extract_filename(url):

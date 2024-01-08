@@ -215,3 +215,20 @@ def find_tmdb_movie_item(video_info):
             if result:
                 return result
 
+
+def update_video_info_from_tmdb(video_info):
+    if video_info.get("imdbnumber"):
+        tmdb_movie_item = get_tmdb_movie_item(video_info["imdbnumber"])
+        video_info.update(tmdb_movie_item.get_info())
+        return
+
+    tmdb_movie_item = find_tmdb_movie_item(video_info)
+    if tmdb_movie_item:
+        imdbnumber = tmdb_movie_item.imdb()
+        video_info.update(tmdb_movie_item.get_info())
+        if imdbnumber:
+            video_info['imdbnumber'] = imdbnumber
+        if tmdb_movie_item.type == 'movie':
+            video_info['mediatype'] = 'movie'
+        elif tmdb_movie_item.type == 'tv':
+            video_info['mediatype'] = 'tvshow'

@@ -478,6 +478,14 @@ class tmdb_movie_item(object):
         if vote_average:
             info["rating"] = vote_average
 
+        if "uniqueid" not in info:
+            info["uniqueid"] = {}
+        info["uniqueid"].update({
+            "imdb": self.imdb(),
+            "tmdb": str(self.tmdb_id()),
+            "tvdb": str(self.tvdb_id()),
+        })
+
         return info
 
     def imdb(self):
@@ -494,11 +502,10 @@ class tmdb_movie_item(object):
             return None
 
     def tmdb_id(self):
-        if "id" in self.json_data_:
-            return self.json_data_["id"]
-        else:
-            return None
+        return self.json_data_.get("id")
 
+    def tvdb_id(self):
+        return self.json_data_.get("external_ids", {}).get("tvdb_id")
 
 class Object(object):
     pass

@@ -10,12 +10,12 @@ class AdvancedSettingsReader(object):
 	dict = {}
 	def LOG(self, s):
 		log.debug(u'[AdvancedSettingsReader]: '.format(s))
-	
+
 	def __init__(self):
 		self.use_mysql = False
 		self.dict.clear()
 		root = []
-	
+
 		try:
 			path = decode_string(translatePath('special://profile/advancedsettings.xml'))
 			self.LOG(path)
@@ -45,9 +45,9 @@ class AdvancedSettingsReader(object):
 						log.debug(child.text)
 				self.LOG('<videodatabase> found')
 				return
-				
+
 		self.LOG('<videodatabase> not found')
-		
+
 	def __getitem__(self, key):
 		return self.dict.get(key, None)
 
@@ -62,11 +62,13 @@ DB_VERSIONS = {
 	'17': '107',
 	'18': '116',
 	'19': '119',
-	'20': '121'
-	# https://raw.githubusercontent.com/xbmc/xbmc/master/xbmc/video/VideoDatabase.cpp - CVideoDatabase::GetSchemaVersion()
+	'20': '121',
+	'21': '131'
+	# https://raw.githubusercontent.com/xbmc/xbmc/master/xbmc/video/VideoDatabase.cpp
+ 	# CVideoDatabase::GetSchemaVersion()
 }
 
-BASE_PATH = 'special://database'		
+BASE_PATH = 'special://database'
 class VideoDatabase(object):
 	@staticmethod
 	def find_last_version(name, path=BASE_PATH):
@@ -87,7 +89,7 @@ class VideoDatabase(object):
 	@staticmethod
 	def get_db_version(name=None):
 		try:
-			import xbmc		
+			import xbmc
 			major = xbmc.getInfoLabel("System.BuildVersion").split(".")[0]
 			ver = DB_VERSIONS.get(major)
 			if ver:
@@ -100,7 +102,7 @@ class VideoDatabase(object):
 	def __init__(self):
 		try:
 			reader = AdvancedSettingsReader()
-			
+
 			self.DB_NAME = reader['name'] if reader['name'] is not None else 'MyVideos'
 			self.DB_NAME += self.get_db_version(self.DB_NAME)
 			log.debug('kodidb: DB name is ' + self.DB_NAME )
@@ -125,7 +127,7 @@ class VideoDatabase(object):
 			self.DB = 'sqlite'
 			db_path = translatePath(BASE_PATH)
 			self.db_dir = filesystem.join(db_path, 'MyVideos%s.db' % VideoDatabase.find_last_version('MyVideos', db_path))
-			
+
 	def create_connection(self):
 		if self.DB == 'mysql':
 			from mysql.connector import connect	# type: ignore
@@ -138,7 +140,7 @@ class VideoDatabase(object):
 		else:
 			from sqlite3 import dbapi2 as db_sqlite
 			return db_sqlite.connect(self.db_dir)
-			
+
 	def sql_request(self, req):
 		if self.DB == 'mysql':
 			return req.replace('?', '%s')
@@ -160,13 +162,13 @@ def request(fn):
 			#for item in res:
 			#	result.append(item)
 			return result
-	
+
 		except BaseException as e:
 			pass
 
 		finally:
 			self.db.close()
-	
+
 	return wrapper
 
 def request_dict(fn):
@@ -196,29 +198,29 @@ def request_dict(fn):
 
 		finally:
 			self.db.close()
-	
+
 	return wrapper
 
 class KodiDB(object):
-	
+
 	def debug(self, msg, line=0):
 		msg = decode_string(msg)
 		log.debug(u'[KodiDB:{}] {}'.format(line, msg))
-	
+
 	def __init__(self, strmName, strmPath, pluginUrl):
-		
+
 		self.debug(u'strmName: ' + strmName, log.lineno())
 		self.debug(u'strmPath: ' + strmPath, log.lineno())
 		self.debug(u'pluginUrl: ' + pluginUrl, log.lineno())
-		
+
 		self.timeOffset	= 0
-		
+
 		self.strmName 	= strmName
 		self.strmPath 	= strmPath
 		self.pluginUrl 	= pluginUrl
-		
+
 		self.videoDB = VideoDatabase()
-	
+
 	def PlayerPreProccessing(self):
 		import xbmc
 		xbmc.sleep(1000)
@@ -236,7 +238,7 @@ class KodiDB(object):
 				self.debug('\tstrmItem is None', log.lineno())
 		finally:
 			self.db.close()
-	
+
 	def PlayerPostProccessing(self):
 		self.db = self.videoDB.create_connection()
 		try:
@@ -254,56 +256,56 @@ class KodiDB(object):
 
 			strmItem = self.getFileItem(self.strmName, self.strmPath)
 			self.debug('\tstrmItem = ' + str(strmItem), log.lineno())
-			
+
 			self.CopyWatchedStatus(pluginItem, strmItem)
 			self.ChangeBookmarkId(pluginItem, strmItem)
 
 		finally:
 			self.db.close()
-		
+
 	def CopyWatchedStatus(self, pluginItem, strmItem ):
-	
+
 		if pluginItem is None or strmItem is None:
 			return
 
 		if pluginItem['playCount'] is None or strmItem['idFile'] is None:
 			return
-		
+
 		cur = self.db.cursor()
 
 		sql = 	'UPDATE files'
 		sql += 	' SET playCount=' + str(pluginItem['playCount'])
 		sql += 	' WHERE idFile = ' + str(strmItem['idFile'])
-		
+
 		self.debug('CopyWatchedStatus: ' + sql, log.lineno())
-		
+
 		cur.execute(sql)
 		self.db.commit()
-		
+
 	def ChangeBookmarkId(self, pluginItem, strmItem ):
 		if pluginItem is None or strmItem is None:
 			return
-			
+
 		if strmItem['idFile'] is None or pluginItem['idFile'] is None:
 			return
-	
+
 		cur = self.db.cursor()
-		
+
 		#delete previous
 		sql = "DELETE FROM bookmark WHERE idFile=" + str(strmItem['idFile'])
 		self.debug('ChangeBookmarkId: ' + sql, log.lineno())
 		cur.execute(sql)
 		self.db.commit()
-		
+
 
 		#set new
 		sql =  'UPDATE bookmark SET idFile=' + str(strmItem['idFile'])
 		sql += ' WHERE idFile = ' +  str(pluginItem['idFile'])
 		self.debug('ChangeBookmarkId: ' + sql, log.lineno())
-		
+
 		cur.execute(sql)
 		self.db.commit()
-		
+
 	def getBookmarkItem(self, idFile):
 		cur = self.db.cursor()
 		sql =	"SELECT idBookmark, idFile, timeInSeconds, totalTimeInSeconds " + \
@@ -313,19 +315,19 @@ class KodiDB(object):
 		for item in bookmarks:
 			self.debug('Bookmark: ' + item.__repr__(), log.lineno())
 			return { 'idBookmark': item[0], 'idFile': item[1], 'timeInSeconds': item[2], 'totalTimeInSeconds': item[3] }
-			
+
 		return None
-		
+
 	def getFileItem(self, strFilename, strPath = None):
 		cur = self.db.cursor()
-		
+
 		sql = 	"SELECT idFile, idPath, strFilename, playCount, lastPlayed " + \
 				"FROM files WHERE strFilename" + \
 				"='" + strFilename.replace("'", "''")	+ "'" #.split('&nfo=')[0] + "%'"
 		self.debug(sql, log.lineno())
 		cur.execute(sql)
 		files = cur.fetchall()
-		
+
 		if len(files) == 0:
 			self.debug('getFileItem: len(files) == 0', log.lineno())
 			return None
@@ -350,19 +352,19 @@ class KodiDB(object):
 						if path[0] == item[1]:
 							self.debug('File: ' + item.__repr__(), log.lineno())
 							return { 'idFile': item[0], 'idPath': item[1], 'strFilename': item[2], 'playCount': item[3], 'lastPlayed': item[4] }
-		
+
 		self.debug('return None', log.lineno())
 		return None
-		
+
 	def getPathId(self, strPath):
 		cur = self.db.cursor()
-		
+
 		sql = 	"SELECT idPath, strPath FROM path " + \
 				"WHERE strPath LIKE '%" + strPath.encode('utf-8').replace("'", "''") + "%'"
 		self.debug(sql, log.lineno())
 		cur.execute(sql)
 		return cur.fetchall()
-		
+
 	def getFileDataById(self, fileId):
 		return
 
@@ -413,7 +415,7 @@ class MoreRequests(object):
 				WHERE idMovie='{}'""".format(id)
 		self._log(sql)
 		return sql
-		
+
 	@request
 	def get_movie_duplicates(self):
 		sql = """SELECT uniqueid_value, COUNT(uniqueid_value)
@@ -421,7 +423,7 @@ class MoreRequests(object):
 				WHERE uniqueid_value like 'tt%'
 				GROUP BY
 				    uniqueid_value
-				HAVING 
+				HAVING
 				    COUNT(uniqueid_value) > 1"""
 		self._log(sql)
 		return sql

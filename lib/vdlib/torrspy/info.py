@@ -19,7 +19,7 @@ def addon_setting(id):
     return addon.getSetting(id)
 
 def addon_set_setting(id, value):
-    log('{} set to {}'.format(id, value))    
+    log('{} set to {}'.format(id, value))
     addon.setSetting(id, value)
 
 def addon_base_path():
@@ -40,7 +40,7 @@ def add_movies_to_lib():
     if s == u'нет':
         return False
 
-    return xbmcgui.Dialog().yesno(addon_title(), 
+    return xbmcgui.Dialog().yesno(addon_title(),
             u'Кино не досмотрено. Сохранить его в медиатеку для последующего просмотра?')
 
 def add_tvshows_to_lib():
@@ -52,8 +52,8 @@ def add_tvshows_to_lib():
     if s == u'нет':
         return False
 
-    return xbmcgui.Dialog().yesno(addon_title(), 
-            u'Вы смотрели эпизод сериала. Сохранить сериал в медиатеку для последующего просмотра?')
+    return xbmcgui.Dialog().yesno(addon_title(),
+        u'Этот сериал не в медиатеке, сохранить для последующего просмотра?')
 
 
 def make_path_to_base_relative(path):
@@ -69,7 +69,7 @@ def save_video_info(hash, video_info):
 
     log('---TorrSpy: save_info---')
 
-    with filesystem.fopen(get_video_info_path(hash, create_path=True), 'w') as vi_out: 
+    with filesystem.fopen(get_video_info_path(hash, create_path=True), 'w') as vi_out:
         json.dump(video_info, vi_out, indent=4)
 
 def save_art(hash, art):

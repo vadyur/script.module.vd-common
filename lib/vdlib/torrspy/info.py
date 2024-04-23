@@ -101,7 +101,7 @@ def load_video_info(hash):
     return {}
 
 def load_art(hash):
-    art_path = get_art_path()
+    art_path = get_art_path(hash)
     if filesystem.exists(art_path):
         with filesystem.fopen(art_path, 'r') as a_in:
             return json.load(a_in)

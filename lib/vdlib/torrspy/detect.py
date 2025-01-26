@@ -17,6 +17,8 @@ cleanstrings = [
    r'(\[.*\])',
 ]
 
+year_pattern = r'(19[0-9][0-9]|20[0-9][0-9])'
+
 def is_video(filename):
     # type: (str) -> bool
     for ext in videoextensions:
@@ -96,6 +98,19 @@ def _find_date_period(source):
     if m:
         return m.group(1), m.group(2)
 
+def cut_by_season_episodes(title: str):
+    pattern = r'([Ss]\d+[Ee][\d-]+)'
+    m = re.search(pattern, title)
+    if m:
+        sep = m.group(1)
+        title = title.split(sep)[0].rstrip(' -.,=[(')
+    return title
+
+
+def cut_by_year(title: str, year: str):
+    return title.split(year)[0].strip()
+
+
 def extract_original_title_year(title):
     source = title
     year = None
@@ -126,7 +141,7 @@ def extract_original_title_year(title):
             year = _find_date_period(source)[0]
         else:
             for part in reversed(parts[1:]):
-                m = re.search(r'(19[0-9][0-9]|20[0-9][0-9])', part.strip())
+                m = re.search(year_pattern, part.strip())
                 if m:
                     original_title, year = extract_title_date(part)
                     if original_title and year:
@@ -134,7 +149,7 @@ def extract_original_title_year(title):
                     year = m.group(1)
 
     if not year:
-        m = re.search(r'(19[0-9][0-9]|20[0-9][0-9])', source)
+        m = re.search(year_pattern, source)
         if m:
             year = m.group(1)
 
@@ -142,10 +157,16 @@ def extract_original_title_year(title):
     if original_title:
         if not year:
             original_title, year = extract_title_date(original_title.strip())
-        video_info['originaltitle'] = original_title.strip()
+        video_info['originaltitle'] = cut_by_season_episodes(original_title).strip()
     if year:
         video_info['year'] = year
-        video_info['title'] = video_info['title'].split(year)[0].strip()
+        video_info['title'] = cut_by_year(video_info['title'], year).strip()
+
+        if original_title and year in original_title:
+            del video_info['originaltitle']
+
+    video_info['title'] = cut_by_season_episodes(video_info['title']).strip()
+
     return video_info
 
 def extract_filename(url):
@@ -160,10 +181,11 @@ def from_translit(text):
 
 def test(url):
     n = extract_filename(url)
-    t, d = extract_title_date(n)
-    r = from_translit(t)
+    if n:
+        t, d = extract_title_date(n)
+        r = from_translit(t)
 
-    return n, t, d, r
+        return n, t, d, r
 
 def get_tmdb_movie_item(imdbnumber):
     from vdlib.scrappers.movieapi import TMDB_API, tmdb_movie_item
@@ -171,15 +193,35 @@ def get_tmdb_movie_item(imdbnumber):
     result = tmdb_movie_item(tmdb.tmdb_data)
     return result
 
-def find_tmdb_movie_item(video_info):
+def find_tmdb_movie_item(video_info, art={}):
     from vdlib.scrappers.movieapi import TMDB_API, tmdb_movie_item
-    tmdb = TMDB_API()
+
+    def find_by_art(results, art):
+        if 'poster' in art:
+            parts = art['poster'].split('/')
+            is_tmdb = False
+            for part in parts:
+                if 'tmdb' in part:
+                    is_tmdb = True
+            if is_tmdb and len(parts):
+                posterId = parts[-1]
+                if posterId:
+                    for item in results:
+                        if posterId in item.poster():
+                            return item
+                        for img in item.json_data_.get('images', []).get('posters', []):
+                            if posterId in img['file_path']:
+                                return item
 
     def find_by(title):
-        results = tmdb.search(title)
+        results = TMDB_API.search(title, append_to_response='images,external_ids')
         if len(results) == 1:
             result = results[0]     # type: tmdb_movie_item
             return result
+
+        by_art = find_by_art(results, art)
+        if by_art:
+            return by_art
 
         def str_func(tmdb, loc):
             return tmdb == loc
@@ -216,13 +258,13 @@ def find_tmdb_movie_item(video_info):
                 return result
 
 
-def update_video_info_from_tmdb(video_info):
+def update_video_info_from_tmdb(video_info, art={}):
     if video_info.get("imdbnumber"):
         tmdb_movie_item = get_tmdb_movie_item(video_info["imdbnumber"])
         video_info.update(tmdb_movie_item.get_info())
         return
 
-    tmdb_movie_item = find_tmdb_movie_item(video_info)
+    tmdb_movie_item = find_tmdb_movie_item(video_info, art)
     if tmdb_movie_item:
         imdbnumber = tmdb_movie_item.imdb()
         video_info.update(tmdb_movie_item.get_info())

@@ -93,11 +93,17 @@ def get_video_info_path(hash, create_path=False):
 
 def load_video_info(hash):
     video_info_path = get_video_info_path(hash)
+
+    log(f"video_info_path: {video_info_path}")
+
     if filesystem.exists(video_info_path):
         with filesystem.fopen(video_info_path, 'r') as vi_in:
+            log(f"video_info_path: loaded")
             result = json.load(vi_in)
             if result:
                 return result
+
+    log(f"video_info_path: not found")
     return {}
 
 def load_art(hash):

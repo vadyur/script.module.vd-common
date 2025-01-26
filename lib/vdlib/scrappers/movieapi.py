@@ -851,12 +851,8 @@ class ImdbAPI(object):
         return {}
 
     def year(self):
-        a = self.page.find("a", href=re.compile(r"releaseinfo\?ref_=tt_ov_rdat")) if self.page else None
-        if a:
-            result = a.get_text()
-            return result[:4]
-        else:
-            raise AttributeError
+        jsn = self.json
+        return jsn.get('datePublished', '')[:4] if jsn else ''
 
     def rating(self):
         jsn = self.json
@@ -1004,7 +1000,7 @@ class TMDB_API(object):
         return None
 
     @staticmethod
-    def search(title):
+    def search(title, append_to_response=None):
         from ..util import quote
 
         url = (
@@ -1014,7 +1010,7 @@ class TMDB_API(object):
             + TMDB_API.tmdb_api_key["key"]
             + "&language=ru"
         )
-        movies = TMDB_API.tmdb_query(url)
+        movies = TMDB_API.tmdb_query(url, "movie", append_to_response)
         url = (
             "http://%s/3/search/tv?query=" % TMDB_API.tmdb_api_key["host"]
             + quote(title.encode("utf-8"))
@@ -1022,11 +1018,14 @@ class TMDB_API(object):
             + TMDB_API.tmdb_api_key["key"]
             + "&language=ru"
         )
-        tv = TMDB_API.tmdb_query(url, "tv")
+        tv = TMDB_API.tmdb_query(url, "tv", append_to_response)
         return movies + tv
 
     @staticmethod
-    def tmdb_query(url, type="movie"):
+    def tmdb_query(url, type="movie", append_to_response=None):
+        if append_to_response is None:
+            append_to_response = 'credits,videos,external_ids'
+
         class tmdb_query_result(object):
             def __init__(self):
                 self.result = []
@@ -1085,7 +1084,7 @@ class TMDB_API(object):
                         + str(r["id"])
                         + "?api_key="
                         + TMDB_API.tmdb_api_key["key"]
-                        + "&language=ru&append_to_response=credits,videos,external_ids"
+                        + f"&language=ru&append_to_response={append_to_response}"
                     )
                     data2 = json.load(urlopen(url2))
 

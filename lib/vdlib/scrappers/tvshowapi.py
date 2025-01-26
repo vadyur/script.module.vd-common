@@ -217,7 +217,7 @@ def parse_torrent(info, season=None):
 			debug(fname)
 			from ..util.base import is_file_playable
 			if is_file_playable(fname):
-				dirlists[parent][fname] = i 
+				dirlists[parent][fname] = i
 
 	files = []
 	for dirname in dirlists:
@@ -403,7 +403,7 @@ class MyShowsAPI(object):
 	myshows = None
 	myshows_ep = None
 
-	dictMyShows = {	
+	dictMyShows = {
 		'title': 'title',
 		'airDate': 'aired',
 		'shortName': 'short',
@@ -469,7 +469,7 @@ class MyShowsAPI(object):
 						if section['kinopoiskId'] == kinopoiskId:
 							return section['id']
 
-					if imdbId is None or kinopoiskId is None:
+					if imdbId is None and kinopoiskId is None:
 						return section['id']
 		else:
 			# except:

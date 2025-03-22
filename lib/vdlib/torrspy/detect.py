@@ -65,8 +65,10 @@ def validate_part(part):
         if key in part:
             return False
 
-    if re.search(u'\\d из \\d', part):
-        return False
+    patterns = [r'\d из \d', r'\d of \d', r'\d\s*-\s*\d']
+    for pattern in patterns:
+        if re.search(pattern, part):
+            return False
 
     return True
 

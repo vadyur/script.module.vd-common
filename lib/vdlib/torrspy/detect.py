@@ -73,7 +73,8 @@ def validate_part(part):
     return True
 
 def clean_part(part):
-    part = re.sub(r'\[.+?\]', '', part)
+    part = re.sub(r'^\[.+?\]', '', part)
+    part = re.sub(r'\[.+?\].+', '', part)
     #part = re.sub(r'\(.+?\)', part)
     return part.strip()
 

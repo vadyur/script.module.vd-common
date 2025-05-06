@@ -83,7 +83,7 @@ def clean_title(part):
     part = re.sub(r'\(.+?\)', '', part)
     part = part.replace('.', ' ')
 
-    part = re.sub(r'[Ss]\d\d.+', '', part)
+    part = re.sub(r'[Ss]\d.+', '', part)
     part = re.sub(r'\w{2,3}Rip.+', '', part)
     part = re.sub(r'1080.+', '', part)
     part = re.sub(r'WEB-DL.+', '', part)

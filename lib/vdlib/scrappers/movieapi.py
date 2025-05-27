@@ -1086,7 +1086,11 @@ class TMDB_API(object):
                         + TMDB_API.tmdb_api_key["key"]
                         + f"&language=ru&append_to_response={append_to_response}"
                     )
-                    data2 = json.load(urlopen(url2))
+                    try:
+                        data2 = json.load(urlopen(url2))
+                    except HTTPError as e:
+                        debug("Error TMDB request for {}".format(url2))
+                        continue
 
                     if "imdb_id" in data2:
                         result.append(tmdb_movie_item(data2, type))

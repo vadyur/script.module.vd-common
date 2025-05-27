@@ -88,7 +88,7 @@ def clean_title(part):
     part = re.sub(r'1080.+', '', part)
     part = re.sub(r'WEB-DL.+', '', part)
 
-    return part.strip()
+    return part.strip(' -\t')
 
 def _extract_KT_title_year(title):
     pattern = r'\[KT\] (.+) \((19[0-9][0-9]|20[0-9][0-9])\)'

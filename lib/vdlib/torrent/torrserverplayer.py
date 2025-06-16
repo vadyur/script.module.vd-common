@@ -62,9 +62,9 @@ class TorrServerPlayer(TorrentPlayer):
 		from ..util.log import debug
 		s = torrserve_stream.Settings()
 
-		self.engine = torrserve_stream.Engine(path=path, log=debug, host=s.host, port=s.port, auth=s.auth)
-		
-		
+		self.engine = torrserve_stream.Engine(path=path, log=debug, **s.engine_args)
+
+
 	def updateCheckingProgress(self, progressBar):
 		pass
 
@@ -78,7 +78,7 @@ class TorrServerPlayer(TorrentPlayer):
 				u'Загрузка', ti['dl_speed'],
 				u'Отдача', ti['ul_speed'])
 			progressBar.update(progress, dialogText + '          ' + peersText, speedsText)
-		
+
 	def GetTorrentInfo(self):
 		st = self.engine.stat()
 
@@ -87,12 +87,12 @@ class TorrServerPlayer(TorrentPlayer):
 						'size' : 		int(st['FileStats'][self.file_id]['Length'] / 1024 / 1024),
 						'dl_speed' : 	int(st['DownloadSpeed'] / 1024),
 						'ul_speed' :	int(st['UploadSpeed'] / 1024),
-						'num_seeds' :	st['ConnectedSeeders'], 
+						'num_seeds' :	st['ConnectedSeeders'],
 						'num_peers' :	st['ActivePeers']
 					}
 		except:
 			pass
-			
+
 		return None
 
 	def close(self):

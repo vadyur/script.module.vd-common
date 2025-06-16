@@ -10,7 +10,7 @@ def get_sort_index(play_url):
     hash = Engine.extract_hash_from_play_url(play_url)
     name = Engine.extract_filename_from_play_url(play_url)
 
-    engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
+    engine = Engine(hash=hash, **ts_settings.engine_args)
     return engine.get_ts_index(name)
 
 class PlayerVideoInfo(object):
@@ -84,4 +84,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-    

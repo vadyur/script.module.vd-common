@@ -54,7 +54,7 @@ def get_movies_by(dirname, filename, fields=["file"]):
     filter = find_file_filter(dirname, filename)
 
     from vdlib.kodi.jsonrpc_requests import VideoLibrary
-    result = VideoLibrary.GetMovies(filter=filter, properties=fields)    
+    result = VideoLibrary.GetMovies(filter=filter, properties=fields)
     return result
 
 def set_movie_resume_playcount(movieid, player_video_info):
@@ -131,17 +131,21 @@ def find_file_filter(dirname, filename):
                     "operator": "is",
                     "field": "filename",
                     "value": filename
-                }                
+                }
             ]}
     return filter
 
 def save_tvshow(player_video_info):
     # type: (PlayerVideoInfo) -> None
     video_info = player_video_info.video_info
+    if not video_info:
+        log('No video info found in player_video_info')
+        return
+
     original_title = video_info.get('originaltitle')
     year = video_info.get('year')
     imdb = video_info.get('imdbnumber')
-    hash = Engine.extract_hash_from_play_url(player_video_info.play_url)
+    hash = Engine.extract_hash_from_play_url(player_video_info.play_url) # type: ignore
     if original_title and year:
         from .info import add_tvshows_to_lib
         from vdlib.util import compare_urls_ignore_domain
@@ -151,8 +155,8 @@ def save_tvshow(player_video_info):
                 if compare_urls_ignore_domain(play_url, player_video_info.play_url):
                     save_tvshow.playing_strm = filename
                 log(hash)
-        
-            ts_engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
+
+            ts_engine = Engine(hash=hash, **ts_settings.engine_args)
             save_tvshow_strms(video_info.get('title'), original_title, year, imdb, ts_engine, episode_func=episode_func)
 
             tvshow_dirname = get_tvshow_dirname(original_title, year)
@@ -189,7 +193,7 @@ def save_tvshow_strms(title, original_title, year, imdb, ts_engine, episode_func
 
     if not ts_stat:
         ts_stat = ts_engine.stat()
-    info = {'name': ts_stat.get('Name'), 
+    info = {'name': ts_stat.get('Name'),
             'files': []}
     ts_engine_files = ts_engine.files(ts_stat)
     for f in ts_engine_files:
@@ -229,7 +233,7 @@ def get_episodes_by(dirname, filename, fields=["file"]):
     filter = find_file_filter(dirname, filename)
 
     from vdlib.kodi.jsonrpc_requests import VideoLibrary
-    result = VideoLibrary.GetEpisodes(filter=filter, properties=fields)    
+    result = VideoLibrary.GetEpisodes(filter=filter, properties=fields)
     return result
 
 

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from typing import Optional, Dict
+
 def executeJSONRPC(q):
     import json, xbmc
     s = json.dumps(q)
@@ -37,6 +39,7 @@ VideoLibrary	= JSONRPC_API('VideoLibrary')
 JSONRPC			= JSONRPC_API('JSONRPC')
 GUI				= JSONRPC_API('GUI')
 Files			= JSONRPC_API('Files')
+Player			= JSONRPC_API('Player')
 
 def remove_movie_by_id(id):
     r = VideoLibrary.RemoveMovie(movieid=id)
@@ -90,3 +93,54 @@ def remove_episode(e):
     # VideoLibrary.RemoveEpisode
     # http://kodi.wiki/view/JSON-RPC_API/v8#VideoLibrary.RemoveEpisode
     result = VideoLibrary.RemoveEpisode(episodeid=e['episodeid'])
+
+def player_open(url: str):
+    # type: (str) -> None
+    """
+    Open a URL in the Kodi player.
+    :param url: The URL to open.
+    """
+    result = Player.Open(item={'file': url})
+    pass  # Handle the result if needed, currently just opens the URL in the player.
+
+def get_first_active_player_id():  # type: () -> Optional[int]
+    """
+    Возвращает playerid первого активного плеера или None, если нет активных плееров.
+    """
+    players = Player.GetActivePlayers()
+    if players:
+        return players[0]['playerid']
+    return None
+
+def player_stop():  # type: () -> None
+    """
+    Stop the Kodi player.
+    """
+    player_id = get_first_active_player_id()
+    if player_id is not None:
+        result = Player.Stop(playerid=player_id)
+    pass  # Handle the result if needed, currently just stops the player.
+
+def player_get_resume():  # type: () -> Optional[Dict]
+    def get_seconds(hours=0, minutes=0, seconds=0, **kwargs):  # type: (int, int, int, ...) -> int
+        return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+
+    player_id = get_first_active_player_id()
+    if player_id is not None:
+        result = Player.GetProperties(playerid=player_id, properties=["time", "totaltime"])
+        if result:
+            return {
+                'time': get_seconds(**result['time']),
+                'totaltime': get_seconds(**result['totaltime'])
+            }
+    pass
+
+def player_seek(seconds: int):
+    """
+    Seek the Kodi player to a specific time.
+    :param seconds: The number of seconds to seek to.
+    """
+    player_id = get_first_active_player_id()
+    if player_id is not None:
+        result = Player.Seek(playerid=player_id, value={'seconds': seconds})
+    pass  # Handle the result if needed, currently just seeks to the specified time.

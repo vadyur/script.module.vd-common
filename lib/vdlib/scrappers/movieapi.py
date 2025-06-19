@@ -1055,12 +1055,12 @@ class TMDB_API(object):
             __nonzero__ = __bool__
 
         result = tmdb_query_result()
-        from ..util import HTTPError
+        from ..util import HTTPError, URLError
         try:
             debug("Request is: " + url)
             data = json.load(urlopen(url))
             debug("data is: {}".format(data))
-        except HTTPError as e:
+        except (HTTPError, URLError) as e:
             debug("Error TMDB request")
             debug(e)
             return tmdb_query_result()
@@ -1088,7 +1088,7 @@ class TMDB_API(object):
                     )
                     try:
                         data2 = json.load(urlopen(url2))
-                    except HTTPError as e:
+                    except (HTTPError, URLError) as e:
                         debug("Error TMDB request for {}".format(url2))
                         continue
 

@@ -972,6 +972,9 @@ def get_tmdb_lang():
     try:
         import xbmc
         lang = xbmc.getLanguage(xbmc.ISO_639_1) # type: ignore
+        # для англ. языка возвращается пустая строка
+        if lang == "":
+            lang = "en"
         xbmc.log(f"TMDB lang: {lang}")
         return lang
     except (ImportError, AttributeError):

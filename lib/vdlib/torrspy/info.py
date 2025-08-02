@@ -30,6 +30,9 @@ def add_all_from_torserver():
     # type: () -> bool
     return addon_setting('add_all_from_torserver') == 'true'
 
+def settings_get_save_position():
+    return addon_setting('save_position') == 'true'
+
 # спросить|автоматически|нет
 def add_movies_to_lib():
     s = decode_string(addon_setting('add_movies_to_lib'))

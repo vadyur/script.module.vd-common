@@ -219,7 +219,7 @@ def find_tmdb_movie_item(video_info, art={}):
                                 return item
 
     def find_by(title):
-        results = TMDB_API.search(title, append_to_response='images,external_ids')
+        results = TMDB_API.search(title, append_to_response='images,external_ids,credits')
         if len(results) == 1:
             result = results[0]     # type: tmdb_movie_item
             return result

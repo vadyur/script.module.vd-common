@@ -2,6 +2,8 @@
 
 import re
 
+from vdlib.scrappers.movieapi import TMDB_API
+
 videoextensions = [
     '.m4v', '.3g2', '.3gp', '.nsv', '.tp', '.ts', '.ty', '.strm', '.pls', '.rm', '.rmvb', '.mpd', '.m3u', '.m3u8', '.ifo', '.mov', '.qt', '.divx', '.xvid',
     '.bivx', '.vob', '.nrg', '.img', '.iso', '.udf', '.pva', '.wmv', '.asf', '.asx', '.ogm', '.m2v', '.avi', '.bin', '.dat', '.mpg', '.mpeg', '.mp4',
@@ -263,7 +265,7 @@ def find_tmdb_movie_item(video_info, art={}):
                 return result
 
 
-def update_video_info_from_tmdb(video_info, art={}):
+def update_video_info_from_tmdb(video_info, art={}, url=None):
     if video_info.get("imdbnumber"):
         tmdb_movie_item = get_tmdb_movie_item(video_info["imdbnumber"])
         video_info.update(tmdb_movie_item.get_info())
@@ -279,3 +281,56 @@ def update_video_info_from_tmdb(video_info, art={}):
             video_info['mediatype'] = 'movie'
         elif tmdb_movie_item.type == 'tv':
             video_info['mediatype'] = 'tvshow'
+            update_video_info_episode_from_tmdb(video_info, tmdb_movie_item.tmdb_id(), url)
+
+def update_video_info_episode_from_tmdb(video_info, tmdb_id, url):
+    from vdlib.scrappers.tvshowapi import TVShowAPI
+
+    if video_info.get("mediatype") != "tvshow" or not url:
+        return
+    if not video_info.get("imdbnumber"):
+        return
+
+    # узнаем сезон и эпизод из url
+
+    # Пример url: .../stream/Some.Show.S01E02.mkv?... или .../stream/Some.Show.1x02.mkv?...
+    # Попробуем извлечь сезон и эпизод из url
+    patterns = [
+        r'[Ss](\d{1,2})[Ee](\d{1,2})',   # S01E02
+        r'(\d{1,2})[xX](\d{1,2})',       # 1x02
+        r'[Сс]езон[ _-]?(\d{1,2})[ _-]?[Сс]ерия[ _-]?(\d{1,2})', # Сезон 1 Серия 2
+    ]
+
+    season_number = None
+    episode_number = None
+
+    for pat in patterns:
+        m = re.search(pat, url)
+        if m:
+            season_number = int(m.group(1))
+            episode_number = int(m.group(2))
+            break
+
+    if season_number is not None:
+        video_info['season'] = season_number
+    if episode_number is not None:
+        video_info['episode'] = episode_number
+
+    if season_number is not None and episode_number is not None:
+        api = TMDB_API(tmdb_id=tmdb_id, type='tv', append_to_response=f"season/{season_number}")
+        episodes = api.episodes(season_number)
+        season_info = api.season(season_number)
+        for episode_info in episodes:
+            if episode_info.get('episode_number') == episode_number:
+                video_info['tvshowtitle'] = video_info['title']
+                video_info['title'] = episode_info['name']
+                episode_overview: str = episode_info['overview']
+                if episode_number == 1 and season_info:
+                    season_overview: str = season_info.get('overview', '')
+                    video_info['plot'] = '\n\n'.join([season_overview, episode_overview]).strip('\n')
+                else:
+                    video_info['plot'] = episode_overview
+
+                video_info["episode"] = episode_number
+                video_info["season"] = season_number
+                video_info['mediatype'] = 'episode'

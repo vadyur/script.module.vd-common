@@ -968,6 +968,14 @@ class TMDB_Episode(TypedDict):
     vote_average: float
     vote_count: int
 
+class TMDB_Season(TypedDict):
+    air_date: str
+    name: str
+    overview: str
+    poster_path: str
+    season_number: int
+    vote_average: float
+
 def get_tmdb_lang():
     try:
         import xbmc
@@ -1357,6 +1365,17 @@ class TMDB_API(object):
     def studios(self):
         ss = [s["name"] for s in self.tmdb_data["production_companies"]]
         return ss
+
+    def season(self, season_number: int) -> Optional[TMDB_Season]:
+        key = f"season/{season_number}"
+        try:
+            result = self.tmdb_data[key]
+        except KeyError:
+            for season in self.tmdb_data.get('seasons', []):
+                if season['season_number'] == season_number:
+                    return season
+            return None
+        return result
 
     def episodes(self, season_number: int) -> List[TMDB_Episode]:
         key = f"season/{season_number}"

@@ -121,261 +121,6 @@ class IDs(object):
 
 from ..base.soup_base import soup_base
 
-
-class world_art_soup(soup_base):
-    headers = {
-        "Host": "www.world-art.ru",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": user_agent,
-        "X-Compress": "null",
-    }
-
-    def __init__(self, url):
-        soup_base.__init__(self, url, self.headers)
-
-
-class world_art_actors(world_art_soup):
-    def __init__(self, url):
-        world_art_soup.__init__(self, url)
-        self._actors = []
-
-    @property
-    def actors(self):
-        if not self._actors:
-
-            def append_actor(tr):
-
-                tds = tr.find_all("td", recursive=False)
-
-                a = tds[1].find("a")
-                act = {}
-                if a:
-                    id = a["href"].split("?id=")[-1]
-                    id = id.split("&")[0]
-                    # if td.find('img', attrs={'src': "../img/photo.gif"}):
-                    # 	act['photo'] = 'http://www.world-art.ru/img/people/10000/{}.jpg'.format(int(id))
-
-                    act["ru_name"] = tds[1].get_text()
-                    act["en_name"] = tds[2].get_text()
-                    act["role"] = tds[3].get_text()
-
-                    # act = { k:v for k, v in act.iteritems() if v }		## No python 2.6 compatible
-                    res = {}
-                    for k, v in act.items():
-                        if v:
-                            res[k] = v
-
-                    self._actors.append(res)
-
-            for b in self.soup.find_all("b"):
-                if b.get_text() == "Актёры":
-                    table = b.find_parent("table")
-                    table = table.find_next_siblings("table")[1]
-                    for tr_next in table.find_all("tr"):
-                        append_actor(tr_next)
-
-                    """
-					tr = b.find_parent('tr')
-					if tr:
-						for tr_next in tr.find_next_siblings('tr'):
-							append_actor(tr_next)
-					"""
-
-        return self._actors
-
-    def __getitem__(self, i):
-        from ..util.string import is_string_type
-
-        if isinstance(i, int):
-            return self.actors[i]
-        elif is_string_type(i):
-            for act in self.actors:
-                if act["ru_name"] == i:
-                    return act
-                if act["en_name"] == i:
-                    return act
-        raise KeyError
-
-
-class world_art_info(world_art_soup):
-    Request_URL = "http://www.world-art.ru/%s"
-
-    attrs = [
-        ("Названия", "knowns", attr_split_slash),
-        ("Производство", "country", attr_text),
-        ("Хронометраж", "runtime", attr_text),
-        ("Жанр", "genre", attr_genre),
-        ("Первый показ", "year", attr_year),
-        ("Режиссёр", "director", attr_text),
-    ]
-
-    def __init__(self, url):
-        world_art_soup.__init__(self, self.Request_URL % url)
-        self._info_data = dict()
-        self._actors = None
-
-    @property
-    def actors(self):
-        if not self._actors:
-            self._actors = world_art_actors(
-                self.url.replace("cinema.php", "cinema_full_cast.php")
-            )
-        return self._actors.actors
-
-    @property
-    def data(self):
-        def next_td(td, fn):
-            return fn(td.next_sibling.next_sibling)
-
-        if not self._info_data:
-            data = {}
-            for td in self.soup.find_all("td", class_="review"):
-                td_text = td.get_text()
-                find = [item for item in self.attrs if td_text in item]
-                if find:
-                    item = find[0]
-                    data[item[1]] = next_td(td, item[2])
-            self._info_data = data.copy()
-
-        return self._info_data
-
-    def __getattr__(self, name):
-        names = [i[1] for i in self.attrs]
-
-        if name in names:
-            return self.data[name]
-        raise AttributeError
-
-    @property
-    def imdb(self):
-        a = self.soup.select("a[href*=imdb.com]")
-        if a:
-            for part in a[0]["href"].split("/"):
-                if part.startswith("tt"):
-                    return part
-
-    @property
-    def kp_url(self):
-        for a in self.soup.find_all('a', attrs={'target': "_blank"}):
-            if 'kinopoisk.ru' in a.get('href', ''):
-                return a["href"].replace('http://', 'https://')
-
-    @property
-    def plot(self):
-        p = self.soup.find("p", attrs={"class": "review", "align": "justify"})
-        if p:
-            return p.get_text()
-
-
-class world_art(world_art_soup):
-    Request_URL = (
-        "http://www.world-art.ru/search.php?public_search=%s&global_sector=cinema"
-    )
-
-    def __init__(self, title, year=None, imdbid=None, kp_url=None):
-        from ..util import quote_plus
-
-        url = self.Request_URL % quote_plus(title.encode("cp1251"))
-        world_art_soup.__init__(self, url)
-
-        self._title = title
-        self._year = year
-        self._imdbid = imdbid
-        self._kp_url = kp_url
-
-        self._info = None
-
-    @property
-    def info(self) -> world_art_info:
-        if not self._info:
-            results = self.search_by_title(self._title)
-
-            # filter by year
-            if self._year:
-                results = [item for item in results if item.year == self._year]
-
-            if self._imdbid:
-                results = [item for item in results if item.imdb == self._imdbid]
-                if results:
-                    self._info = results[0]
-                    return self._info
-
-            if self._kp_url:
-                results = [
-                    item
-                    for item in results
-                    if IDs.id_by_kp_url(item.kp_url) == IDs.id_by_kp_url(self._kp_url)
-                ]
-                if results:
-                    self._info = results[0]
-                    return self._info
-
-            # filter by title
-            for item in results:
-                if self._title in item.knowns:
-                    self._info = item
-                    return self._info
-
-            self._info = "No info"
-
-        # for info in results:
-        # 	imdb = info.imdb
-
-        if self._info == "No info":
-            raise AttributeError
-
-        return self._info   # type: ignore
-
-    def search_by_title(self, title):
-        result = []
-
-        for meta in self.soup.find_all("meta"):
-            # 	meta	<meta content="0; url=/cinema/cinema.php?id=68477" http-equiv="Refresh"/>	Tag
-            if meta.get(
-                "http-equiv"
-            ) == "Refresh" and "url=/cinema/cinema.php?id=" in meta.get("content"):
-                url = meta.get("content").split("url=/")[-1]
-                info = world_art_info(url)
-                info.year = self._year
-                # info.knowns		= [ self._title ]
-
-                result.append(info)
-
-        for a in self.soup.find_all("a", class_="estimation"):
-
-            info = world_art_info(a["href"])
-
-            tr = a
-            while tr.name != "tr":
-                tr = tr.parent
-            info.year = tr.find("td").get_text()
-
-            td = a.parent
-            info.knowns = [i.get_text() for i in td.find_all("i")]
-
-            result.append(info)
-        return result
-
-    def plot(self):
-        return self.info.plot
-
-    # def trailer(self):
-    # 	info = self.info
-    def director(self):
-        try:
-            result = self.info.director
-            result = result.replace("и другие", "")
-            return [d.strip() for d in result.split(",")]
-        except:
-            return []
-
-    def actors(self):
-        try:
-            return self.info.actors
-        except:
-            return []
-
-
 class tmdb_movie_item(object):
     def __init__(self, json_data, type="movie"):
         self.json_data_ = json_data
@@ -864,12 +609,8 @@ class ImdbAPI(object):
         return duration
 
     def mpaa(self):
-        pattern = r"/title/tt\d+/parentalguide/certificates"
-        a = self.page.find("a", href=re.compile(pattern)) if self.page else None
-        if a:
-            return a.get_text()
-        else:
-            raise AttributeError
+        result = self.json.get('contentRating', '')
+        return result
 
     def title(self):
         result = self.json['alternateName']
@@ -1446,7 +1187,6 @@ class MovieAPI(object):
         self.tmdbapi = None
         self.imdbapi = None
         self.kinopoiskapi = None
-        self.worldartapi = None
 
         self._actors = None
 
@@ -1464,7 +1204,7 @@ class MovieAPI(object):
                 self.providers.append(self.kinopoiskapi)
 
         if imdb_id or kinopoisk:
-            if not settings or settings.use_worldart:
+            if not settings:
                 if not orig:
                     for api in self.providers:
                         try:
@@ -1472,18 +1212,13 @@ class MovieAPI(object):
                             break
                         except:
                             pass
-                try:
-                    self.worldartapi = world_art(orig, imdbid=imdb_id, kp_url=kinopoisk)
-                    self.providers.append(self.worldartapi)
-                except:
-                    pass
 
     def actors(self):
         if self._actors is not None:
             return self._actors
 
         actors = []
-        for api in [self.kinopoiskapi, self.tmdbapi, self.worldartapi]:
+        for api in [self.kinopoiskapi, self.tmdbapi]:
             if api:
                 a = api.actors()
                 if a:
@@ -1575,38 +1310,3 @@ class MovieAPI(object):
                 continue
 
         raise AttributeError
-
-
-if __name__ == "__main__":
-    # for res in MovieAPI.search(u'Обитаемый остров'):
-    # 	print res.get_info()
-
-    # for res in MovieAPI.popular_tv():
-    # 	print res.get_info()
-
-    # MovieAPI.tmdb_query(
-    # 	'http://api.themoviedb.org/3/movie/tt4589186?api_key=f7f51775877e0bb6703520952b3c7840&language=ru')
-
-    # api = MovieAPI(kinopoisk = 'https://www.kinopoisk.ru/film/894027/')
-    # api = MovieAPI(kinopoisk = 'https://www.kinopoisk.ru/film/257774/')
-    # api = world_art(title=u"Команда Тора")
-
-    #from settings import Settings
-    #
-    #settings = Settings()
-    #settings.kp_usezaborona = True
-    #api = KinopoiskAPI("https://www.kinopoisk.ru/film/257774/", settings)
-    #title = api.title()
-    #
-    #api = world_art(
-    #    "The Fate of the Furious",
-    #    year="2017",
-    #    kp_url="https://www.kinopoisk.ru/film/894027/",
-    #)
-    #info = api.info
-    #knowns = info.knowns
-    #plot = info.plot
-    #
-    #actors = [act for act in info.actors]
-    #
-    pass

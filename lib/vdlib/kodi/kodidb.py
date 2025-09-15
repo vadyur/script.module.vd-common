@@ -63,7 +63,8 @@ DB_VERSIONS = {
 	'18': '116',
 	'19': '119',
 	'20': '121',
-	'21': '131'
+	'21': '131',
+	'22': '135'
 	# https://raw.githubusercontent.com/xbmc/xbmc/master/xbmc/video/VideoDatabase.cpp
  	# CVideoDatabase::GetSchemaVersion()
 }
@@ -97,7 +98,7 @@ class VideoDatabase(object):
 
 			return VideoDatabase.find_last_version(name, 'special://home/dbversions')
 		except (ImportError, ValueError):
-			return DB_VERSIONS['17']
+			return DB_VERSIONS['21']
 
 	def __init__(self):
 		try:

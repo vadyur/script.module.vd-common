@@ -12,7 +12,7 @@ scrapper_settings = {
 	'metadata.themoviedb.org': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="fanart">true</setting><setting id="landscape" default="true">false</setting><setting id="trailer">true</setting><setting id="language">ru</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="RatingS" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="certprefix" default="true">Rated </setting></settings>',
 	'metadata.themoviedb.org.python': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="language">ru-RU</setting><setting id="searchlanguage" default="true">en-US</setting><setting id="fanart" default="true">true</setting><setting id="landscape" default="true">true</setting><setting id="trailer" default="true">true</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="certprefix" default="true">Rated </setting><setting id="RatingS" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="traktanyway" default="true">false</setting><setting id="multiple_studios" default="true">false</setting><setting id="add_tags" default="true">true</setting><setting id="lastUpdated">1682607879.690234</setting><setting id="originalUrl">https://image.tmdb.org/t/p/original</setting><setting id="previewUrl">https://image.tmdb.org/t/p/w780</setting><setting id="enable_fanarttv_artwork" default="true">true</setting><setting id="fanarttv_language" default="true">en</setting><setting id="prioritize_fanarttv_artwork" default="true">false</setting><setting id="fanarttv_clientkey" default="true" /></settings>',
 	'metadata.tvshows.themoviedb.org': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="language" default="true">ru</setting><setting id="titleprefix" default="true">Episode </setting><setting id="titlesuffix" default="true" /><setting id="tmdbart">true</setting><setting id="fanarttvart">true</setting><setting id="tvdbwidebanners">true</setting><setting id="RatingS" default="true">Themoviedb</setting><setting id="fallback">true</setting><setting id="alsoimdb" default="true">false</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="certprefix" default="true" /></settings>',
-	'metadata.tvshows.themoviedb.org.python': '<settings version="2"><setting id="language">ru-RU</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="usecertprefix" default="true">true</setting><setting id="certprefix" default="true">Rated </setting><setting id="keeporiginaltitle" default="true">false</setting><setting id="cat_landscape" default="true">true</setting><setting id="studio_country" default="true">false</setting><setting id="enab_trailer" default="true">true</setting><setting id="players_opt" default="true">Tubed</setting><setting id="ratings" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="traktanyway" default="true">false</setting><setting id="tmdbanyway" default="true">true</setting><setting id="enable_fanarttv" default="true">true</setting><setting id="fanarttv_clientkey" default="true" /><setting id="verboselog" default="true">false</setting><setting id="lastUpdated">1682607891.822989</setting><setting id="originalUrl">https://image.tmdb.org/t/p/original</setting><setting id="previewUrl">https://image.tmdb.org/t/p/w780</setting></settings>'
+	'metadata.tvshows.themoviedb.org.python': '<settings version="2"><setting id="language">ru-RU</setting><setting id="languageDetails">ru-RU</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="usecertprefix" default="true">true</setting><setting id="certprefix" default="true">Rated </setting><setting id="keeporiginaltitle" default="true">false</setting><setting id="cat_landscape" default="true">true</setting><setting id="studio_country" default="true">false</setting><setting id="enab_trailer" default="true">true</setting><setting id="players_opt" default="true">Tubed</setting><setting id="ratings" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="traktanyway" default="true">false</setting><setting id="tmdbanyway" default="true">true</setting><setting id="enable_fanarttv" default="true">true</setting><setting id="fanarttv_clientkey" default="true" /><setting id="verboselog" default="true">false</setting><setting id="lastUpdated">1682607891.822989</setting><setting id="originalUrl">https://image.tmdb.org/t/p/original</setting><setting id="previewUrl">https://image.tmdb.org/t/p/w780</setting></settings>'
 }
 
 def need_create(settings):
@@ -48,7 +48,7 @@ def create_movies_and_tvshows(path, scrapper='metadata.local', scrapper_tv='meta
 	if not filesystem.exists(path1):
 		filesystem.makedirs(path1)
 	sources.add_video(path1, u'Фильмы', 'movies', scrapper, suffix)
-	
+
 	path2 = filesystem.join(base_path(), 'TVShows')
 	if not filesystem.exists(path2):
 		filesystem.makedirs(path2)
@@ -230,10 +230,10 @@ class VideoDB(VideoDatabase):
 	def path_exists(self, path):
 		return bool(self.get_path(path))
 
-	def update_path(self, path, content, 
-					scan_recursive=False, 
-					use_folder_names=False, 
-					no_update=False, 
+	def update_path(self, path, content,
+					scan_recursive=False,
+					use_folder_names=False,
+					no_update=False,
 					scrapper = 'metadata.local'):
 		scan_recursive = 2147483647 if scan_recursive else 0
 
@@ -247,7 +247,7 @@ class VideoDB(VideoDatabase):
 				(content, scrapper, scan_recursive, use_folder_names, str_settings, no_update, path))
 		else:
 			now_func = 'NOW()' if self.DB == 'mysql' else "DATETIME('now')"
-		
+
 			c.execute(self.sql_request(
 				"INSERT INTO path (strPath, strContent, strScraper, scanRecursive, "
 				"useFolderNames, strSettings, noUpdate, exclude, dateAdded) "

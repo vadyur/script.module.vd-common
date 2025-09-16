@@ -1,4 +1,6 @@
-﻿from ..util import log, filesystem
+﻿import base64
+import requests
+from ..util import log, filesystem
 
 import os, time, sys
 import xml.etree.ElementTree as ET
@@ -64,7 +66,7 @@ DB_VERSIONS = {
 	'19': '119',
 	'20': '121',
 	'21': '131',
-	'22': '135'
+	#'22': '135'
 	# https://raw.githubusercontent.com/xbmc/xbmc/master/xbmc/video/VideoDatabase.cpp
  	# CVideoDatabase::GetSchemaVersion()
 }
@@ -88,15 +90,44 @@ class VideoDatabase(object):
 			raise ValueError('find_last_version not detect')
 
 	@staticmethod
-	def get_db_version(name=None):
+	def find_db_version_by_git(commit: str) -> int:
+		url = f'https://api.github.com/repos/xbmc/xbmc/contents/xbmc/video/VideoDatabase.cpp?ref={commit}'
+		response = requests.get(url)
+		if response.status_code != 200:
+			return 0
+		json_response = response.json()
+		content = base64.b64decode(json_response['content']).decode('utf-8')
+
+		find = False
+		for line in content.split('\n'):
+			if 'CVideoDatabase::GetSchemaVersion()' in line:
+				find = True
+				continue
+			if find:
+				if 'return' in line:
+					try:
+						return int(line.split('return ')[1].split(';')[0])
+					except (IndexError, ValueError) as e:
+						log.debug(f"Error parsing schema version from line: {line} - {e}", log.lineno())
+						return 0
+		return 0
+
+	@staticmethod
+	def get_db_version(name=None) -> str:
 		try:
-			import xbmc
-			major = xbmc.getInfoLabel("System.BuildVersion").split(".")[0]
+			from vdlib.kodi import get_kodi_version
+			major, minor, date, commit = get_kodi_version()
+
 			ver = DB_VERSIONS.get(major)
 			if ver:
 				return ver
 
-			return VideoDatabase.find_last_version(name, 'special://home/dbversions')
+			if not ver and commit:
+				ver = VideoDatabase.find_db_version_by_git(commit)
+			if ver:
+				return str(ver)
+
+			return str(VideoDatabase.find_last_version(name, 'special://home/dbversions'))
 		except (ImportError, ValueError):
 			return DB_VERSIONS['21']
 
@@ -104,7 +135,7 @@ class VideoDatabase(object):
 		try:
 			reader = AdvancedSettingsReader()
 
-			self.DB_NAME = reader['name'] if reader['name'] is not None else 'MyVideos'
+			self.DB_NAME = str(reader['name']) if reader['name'] is not None else 'MyVideos'
 			self.DB_NAME += self.get_db_version(self.DB_NAME)
 			log.debug('kodidb: DB name is ' + self.DB_NAME )
 

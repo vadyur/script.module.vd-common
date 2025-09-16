@@ -213,7 +213,7 @@ class Sources(object):
 
 		db = VideoDB()
 		scan_recursive = bool(content == 'movies')
-		db.update_path(path, content, scan_recursive, 0, 0, scrapper=scrapper)
+		db.update_path(path, content, scan_recursive, False, False, scrapper=scrapper)
 
 
 class VideoDB(VideoDatabase):

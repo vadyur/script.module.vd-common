@@ -2,13 +2,13 @@ import time, os, pickle, hashlib
 from functools import wraps
 from shutil import copyfile
 from copy import deepcopy
-from typing import Callable, Any, Union
+from typing import Callable, Union
 import atexit
-
+from vdlib.kodi.compat import translatePath
 
 
 class Storage():
-    def __init__(self, storage_dir, filename='storage.pcl'):
+    def __init__(self, storage_dir, filename='storage4cache.pcl'):
         """
         Class constructor
 
@@ -50,6 +50,20 @@ class Storage():
     def __str__(self):
         return '<Storage {0}>'.format(self._storage)
 
+    def _clean_expired_data(self):
+        now = time.time()
+        if isinstance(self._storage, dict):
+            keys_to_delete = []
+            for k, v in self._storage.items():
+                if isinstance(v, tuple):
+                    if len(v) == 3:
+                        if v[1] + v[2] < now:
+                            keys_to_delete.append(k)
+                    elif len(v) == 2:
+                        keys_to_delete.append(k)
+            for k in keys_to_delete:
+                del self._storage[k]
+
     def flush(self):
         print(f"Flushing storage to {self._filename}")
         """
@@ -59,6 +73,9 @@ class Storage():
         and invalidates the Storage instance. Unchanged Storage is not saved
         but simply invalidated.
         """
+
+        self._clean_expired_data()
+
         contents = pickle.dumps(self._storage, protocol=2)
         if self._hash is None or hashlib.md5(contents).hexdigest() != self._hash:
             tmp = self._filename + '.tmp'
@@ -88,10 +105,14 @@ class Storage():
         """
         return deepcopy(self._storage)
 
-import xbmc
+import xbmc, xbmcaddon
 use_simpleplugin = not hasattr(xbmc, '__kodistubs__')
 
-storage_path = '.'
+def get_profile_dir():
+    addon = xbmcaddon.Addon()
+    return translatePath(addon.getAddonInfo('profile'))
+
+storage_path = translatePath('special://temp')
 if use_simpleplugin:
     try:
         from simpleplugin import Plugin
@@ -100,6 +121,9 @@ if use_simpleplugin:
         storage_path = plugin.profile_dir
     except ImportError:
         use_simpleplugin = False
+        profile_dir = get_profile_dir()
+        if profile_dir:
+            storage_path = profile_dir
 
 if not use_simpleplugin:
     mem_storage = {}
@@ -155,7 +179,7 @@ def cached(duration: Union[int, float, str] = 10) -> Callable:
             except Exception:
                 pass
             data = func(*args, **kwargs)
-            storage[key] = (data, now)
+            storage[key] = (data, now, seconds)
             return data
         return wrapper
     return decorator

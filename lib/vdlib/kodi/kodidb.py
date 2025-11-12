@@ -1,4 +1,5 @@
 ﻿import base64
+from typing import List, Tuple
 import requests
 from ..util import log, filesystem
 
@@ -19,7 +20,7 @@ class AdvancedSettingsReader(object):
 		root = []
 
 		try:
-			path = decode_string(translatePath('special://profile/advancedsettings.xml'))
+			path = decode_string(translatePath('special://userdata/advancedsettings.xml'))
 			self.LOG(path)
 			if filesystem.exists(path):
 				self.load(path)
@@ -421,7 +422,7 @@ class MoreRequests(object):
 		return sql
 
 	def _log(self, s):
-		from log import debug
+		from vdlib.util.log import debug
 		debug('MoreRequests: {}'.format(s))
 
 	@request
@@ -460,3 +461,23 @@ class MoreRequests(object):
 		self._log(sql)
 		return sql
 
+	@request
+	def get_directory_db_id(self, directory):
+		# Добавляем слеш в конце если его нет
+		if not directory.endswith('/'):
+			directory += '/'
+		sql = """SELECT idPath FROM path WHERE strPath = '{}'""".format(directory.replace("'", "''"))
+		self._log(sql)
+		return sql
+
+	@request
+	def get_watched_video_files_by_directory(self, directory_id: int) -> List[Tuple[int, str]]:
+		sql = """SELECT idFile, strFilename FROM files WHERE idPath = '{}' AND playCount > 0""".format(directory_id)
+		self._log(sql)
+		return sql
+
+	@request
+	def get_unwatched_video_files_by_directory(self, directory_id: int):
+		sql = """SELECT idFile, strFilename FROM files WHERE idPath = '{}' AND (playCount IS NULL OR playCount = 0)""".format(directory_id)
+		self._log(sql)
+		return sql

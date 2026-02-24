@@ -213,15 +213,18 @@ def find_tmdb_movie_item(video_info, art={}):
             if is_tmdb and len(parts):
                 posterId = parts[-1]
                 if posterId:
+                    posterId = posterId.split('?')[0]
                     for item in results:
                         if posterId in item.poster():
                             return item
-                        for img in item.json_data_.get('images', []).get('posters', []):
+                        for img in item.json_data_.get('images', {}).get('posters', []):
                             if posterId in img['file_path']:
                                 return item
 
     def find_by(title):
-        results = TMDB_API.search(title, append_to_response='images,external_ids,credits')
+        # null = без языка, остальные — коды ISO 639-1 для постеров/фонов
+        image_langs = 'null,en,ru,uk,de,fr,es,it,pt,pl,tr,ja,ko,zh,hu,cs,sk'
+        results = TMDB_API.search(title, append_to_response='images,external_ids,credits', include_image_language=image_langs)
         if len(results) == 1:
             result = results[0]     # type: tmdb_movie_item
             return result

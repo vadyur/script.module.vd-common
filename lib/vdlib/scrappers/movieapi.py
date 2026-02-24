@@ -774,14 +774,16 @@ class TMDB_API(object):
             lang = TMDB_API.lang
             url = f"http://{host}/3/search/{media_type}?query={query}&api_key={api_key}&language={lang}"
             for k, v in kwargs.items():
+                if k == 'include_image_language':
+                    continue
                 url += f"&{k}={v}"
             return url
 
         url = make_url("movie")
-        movies = TMDB_API.tmdb_query(url, "movie", append_to_response)
+        movies = TMDB_API.tmdb_query(url, "movie", append_to_response, **kwargs)
 
         url = make_url("tv")
-        tv = TMDB_API.tmdb_query(url, "tv", append_to_response)
+        tv = TMDB_API.tmdb_query(url, "tv", append_to_response, **kwargs)
         return movies + tv
 
     @staticmethod

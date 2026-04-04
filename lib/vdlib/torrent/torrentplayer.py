@@ -1,5 +1,6 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os, sys
+from typing import Optional
 
 from ..util.log import debug, print_tb
 from ..util import filesystem
@@ -31,7 +32,7 @@ class TorrentPlayer(object):
 		self._info_hash = None
 
 	@property
-	def decoded(self):
+	def decoded(self) -> Optional[dict]:
 		if not self._decoded:
 			data = None
 			with filesystem.fopen(self.path, 'rb') as torr:
@@ -49,12 +50,15 @@ class TorrentPlayer(object):
 		return self._decoded
 
 	@property
-	def info_hash(self):
+	def info_hash(self) -> Optional[str]:
 		if not self._info_hash:
 			try:
 				import hashlib
-				info = self.decoded[_('info')]
-				self._info_hash = hashlib.sha1(bencode(info)).hexdigest()
+				if isinstance(self.decoded, dict):
+					info = self.decoded[_('info')]
+					self._info_hash = hashlib.sha1(bencode(info)).hexdigest()
+				else:
+					return None
 			except:
 				return None
 
@@ -96,7 +100,7 @@ class TorrentPlayer(object):
 					print_tb()
 			except BaseException as e:
 				print_tb()
-				
+
 		return name
 
 	def GetLastTorrentData(self):

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
+from typing import Optional
 from vdlib.util.string import decode_string
 from ..util import log
 
-from torrent2http import State, Engine, MediaType, Encryption
 from .torrentplayer import TorrentPlayer
 
-import time, xbmc, xbmcaddon
+import time, xbmcaddon
 from ..util import path2url, filesystem
 
-	
+
 _addon      =   xbmcaddon.Addon('')
 _ADDON_NAME =   _addon.getAddonInfo('id')
 
@@ -21,50 +21,49 @@ def getSetting(settings_name):
 
 
 class Torrent2HTTPPlayer(TorrentPlayer):
-	
 	def debug(self, msg):
 		try:
 			import log
 			log.debug('[Torrent2HTTPPlayer] %s' % msg)
 		except:
 			pass
-			
+
 	def debug_assignment(self, value, varname):
 		try:
 			self.debug('%s: %s' % (varname, str(value)))
 		except:
 			pass
 		return value
-		
+
 	def __init__(self, settings):
-		self.engine = None
+		from torrent2http import Engine
+
+		self.engine: Optional[Engine] = None
 		self.file_id = None
 		self.settings = settings
 		self.download_path = None
-		
+
 		self.pre_buffer_bytes 	= self.debug_assignment(int(getSetting('pre_buffer_bytes'))*1024*1024, 'pre_buffer_bytes')
-		
+
 		self.debug('__init__')
 		self.debug(_ADDON_NAME)
 
 		TorrentPlayer.__init__(self)
-		
+
 	def close(self):
 		if self.engine != None:
 			self.engine.close()
 			self.engine = None
-			
+
 		self.debug('close')
-		
+
 	def __exit__(self):
 		self.debug('__exit__')
 		self.close()
-		
+
 	def _AddTorrent(self, path):
-		try:
-			from xbmc import translatePath
-		except ImportError:
-			from xbmcvfs import translatePath
+		from torrent2http import Engine, Encryption
+		from vdlib.kodi.compat import translatePath
 
 		if filesystem.exists(path):
 			if path.startswith(r'\\') or '://' in path:
@@ -85,10 +84,10 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 		download_path = getSetting('storage_path')
 		if download_path == '':
 			download_path = translatePath('special://temp')
-			
-		self.debug('download_path: %s' % download_path)	
+
+		self.debug('download_path: %s' % download_path)
 		self.download_path = download_path
-		
+
 		encryption = self.debug_assignment( Encryption.ENABLED if getSetting('encryption') == 'true' else Encryption.DISABLED ,'encryption')
 		upload_limit = self.debug_assignment( int(getSetting("upload_limit")) * 1024 if getSetting("upload_limit") != "" else 0 ,"upload_limit")
 		download_limit = self.debug_assignment( int(getSetting("download_limit")) * 1024 if getSetting("download_limit") != "" else 0 ,"download_limit")
@@ -104,18 +103,18 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 			use_random_port = True
 
 		keep_files = decode_string(getSetting('action_files')) != u'удалить'
-		
+
 		args = {'uri': uri, 'download_path': download_path, 'user_agent': user_agent, 'encryption': encryption,
 							'upload_kbps': upload_limit, 'download_kbps': download_limit, 'connections_limit': connections_limit,
 							'keep_incomplete': False, 'keep_complete': keep_files, 'keep_files': keep_files, 'dht_routers': dht_routers, 'use_random_port': use_random_port, 'listen_port': listen_port,
 							'log_files_progress': True, 'trackers': add_trackers, 'startup_timeout': 1000 }
 
 		try:
-			if keep_files:
+			if keep_files and self.info_hash:
 				args['resume_file'] = filesystem.join(self.settings.torrents_path(), self.info_hash + '.resume')
 		except BaseException as e:
 			log.print_tb(e)
-			if keep_files:
+			if keep_files and self.info_hash:
 				args['resume_file'] = filesystem.join(download_path, self.info_hash + '.resume')
 
 		if args.get('resume_file'):
@@ -125,6 +124,8 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 
 
 	def CheckTorrentAdded(self):
+		from torrent2http import State
+
 		if self.engine:
 			status = self.engine.status()
 			self.engine.check_torrent_error(status)
@@ -136,73 +137,78 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 				return False
 		else:
 			return TorrentPlayer.CheckTorrentAdded(self)
-		
+
 		return True
-		
+
 	def _GetLastTorrentData(self):
 		while True:
 			time.sleep(0.2)
-			
+
 			# Get torrent files list, filtered by video file type only
-			files = self.engine.list() #(media_types=[MediaType.VIDEO])
+			files = self.engine.list() if self.engine else None #(media_types=[MediaType.VIDEO])
 			# If torrent metadata is not loaded yet then continue
 			if files is None:
 				self.debug('files is None')
 				continue
-				
+
 			self.debug('files len: ' + str(len(files)))
-			
+
 			# Torrent has no video files
 			if not files or len(files) > 0:
 				break
-				
+
 		info_hash = ''
 		playable_items = []
 		for item in files:
 			if TorrentPlayer.is_playable(item.name):
 				playable_items.append({'index': item.index, 'name': item.name, 'size': int(item.size)})
-		
+
 		return { 'info_hash': info_hash, 'files': playable_items }
-		
+
 	def StartBufferFile(self, fileIndex):
 		self._AddTorrent(self.path)
 
 		self.download_path = None
-		self.engine.start(fileIndex)
+		if self.engine:
+			self.engine.start(fileIndex)
 		self.file_id = fileIndex
-		
+
 		self.debug('StartBufferFile: %d' % fileIndex)
-		
+
 	def CheckBufferComplete(self):
+		from torrent2http import State
+
 		if not self.download_path is None:
 			return True
-		
-		status = self.engine.status()
-		self.debug('CheckBufferComplete: ' + str(status.state_str))
-		if status.state == State.DOWNLOADING:
+
+		status = self.engine.status() if self.engine else None
+		if status:
+			self.debug('CheckBufferComplete: ' + str(status.state_str))
+		if status and status.state == State.DOWNLOADING:
 			# Wait until minimum pre_buffer_bytes downloaded before we resolve URL to XBMC
-			f_status = self.engine.file_status(self.file_id)
-			self.debug('f_status.download %d' % f_status.download)
-			if f_status.download >= self.pre_buffer_bytes:
-				return True
+			f_status = self.engine.file_status(self.file_id) if self.engine else None
+			if f_status:
+				self.debug('f_status.download %d' % f_status.download)
+				if f_status.download >= self.pre_buffer_bytes:
+					return True
 
-		return status.state in [State.FINISHED, State.SEEDING]
+		return status and status.state in [State.FINISHED, State.SEEDING]
 
-	def GetBufferingProgress(self):
-		f_status = self.engine.file_status(self.file_id)
-		
-		try:
+	def GetBufferingProgress(self) -> int:
+		if not self.engine:
+			return 0
+		f_status = self.engine.file_status(self.file_id) if self.engine else None
+		if f_status:
 			progress = int(round(float(f_status.download) / self.pre_buffer_bytes, 2) * 100)
 			self.debug('GetBufferingProgress: %d' % progress)
-			if progress > 99: 
-				progress = 99
-		except:
-			progress = 0
-		
-	
-		return progress
+			if progress > 99:
+					progress = 99
+			return progress
+		return 0
 
 	def updateCheckingProgress(self, progressBar):
+		if not self.engine:
+			return
 		status = self.engine.status()
 		percents = int(status.progress * 100)
 		if percents > 99:
@@ -210,12 +216,14 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 		progressBar.update(percents, u'Проверка файлов...', ' ', ' ')
 
 	def updateDialogInfo(self, progress, progressBar):
+		if not self.engine:
+			return
 		f_status = self.engine.file_status(self.file_id)
 		status = self.engine.status()
-		
+
 		if f_status is None or status is None:
 			return
-		
+
 		dialogText = u'Загружено: ' + "%d MB / %d MB" % \
 													(int(f_status.download / 1024 / 1024), int(f_status.size / 1024 / 1024))
 		peersText = u' [%s: %s; %s: %s]' % (u'Сидов', status.num_seeds, u'Пиров', status.num_peers)
@@ -223,11 +231,13 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 			u'Загрузка', int(status.download_rate / 1024 * 8),
 			u'Отдача', int(status.upload_rate / 1024 * 8))
 		progressBar.update(progress, dialogText + '          ' + peersText, speedsText)
-		
-	def GetTorrentInfo(self):
+
+	def GetTorrentInfo(self) -> Optional[dict]:
+		if not self.engine:
+			return None
 		f_status = self.engine.file_status(self.file_id)
 		status = self.engine.status()
-		
+
 		if f_status is None or status is None:
 			return None
 
@@ -236,15 +246,17 @@ class Torrent2HTTPPlayer(TorrentPlayer):
 						'size' : 		int(f_status.size / 1024 / 1024),
 						'dl_speed' : 	int(status.download_rate),
 						'ul_speed' :	int(status.upload_rate),
-						'num_seeds' :	status.num_seeds, 
+						'num_seeds' :	status.num_seeds,
 						'num_peers' :	status.num_peers
 					}
 		except:
 			pass
-			
+
 		return None
 
-	def GetStreamURL(self, playable_item):
+	def GetStreamURL(self, playable_item) -> Optional[str]:
+		if not self.engine:
+			return None
 		if self.download_path is None:
 			f_status = self.engine.file_status(self.file_id)
 			self.debug('GetStreamURL: %s' % f_status.url)

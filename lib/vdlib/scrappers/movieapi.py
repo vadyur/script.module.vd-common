@@ -718,21 +718,38 @@ class TMDB_Season(TypedDict):
     vote_average: float
 
 def get_tmdb_lang():
+    # 1. settings override
+    try:
+        import xbmcaddon
+
+        addon = xbmcaddon.Addon("script.service.torrspy")
+        lang = addon.getSetting("tmdb_language")
+        if lang and lang != "auto":
+            return lang
+
+    except Exception:
+        pass
+
+    # 2. Kodi language
     try:
         import xbmc
-        lang = xbmc.getLanguage(xbmc.ISO_639_1) # type: ignore
-        # для англ. языка возвращается пустая строка
-        if lang == "":
+        lang = xbmc.getLanguage(xbmc.ISO_639_1)
+
+        if not lang:
             lang = "en"
-        xbmc.log(f"TMDB lang: {lang}")
+
         return lang
-    except (ImportError, AttributeError):
+
+    except Exception:
         return "ru"
 
 class TMDB_API(object):
     api_url = "https://api.themoviedb.org/3"
     tmdb_api_key = get_tmdb_api_key()
-    lang = get_tmdb_lang()
+    
+    @staticmethod
+    def get_lang():
+        return get_tmdb_lang()
 
     @staticmethod
     def url_imdb_id(idmb_id):
@@ -741,7 +758,7 @@ class TMDB_API(object):
             TMDB_API.tmdb_api_key["host"],
             idmb_id,
             TMDB_API.tmdb_api_key["key"],
-            TMDB_API.lang
+            TMDB_API.get_lang()
         )
         tmdb_data = json.load(urlopen(url))
 
@@ -755,7 +772,7 @@ class TMDB_API(object):
                     + str(id)
                     + "?api_key="
                     + TMDB_API.tmdb_api_key["key"]
-                    + "&language=" + TMDB_API.lang
+                    + "&language=" + TMDB_API.get_lang()
                     + "&append_to_response=credits"
                 )
             except:
@@ -771,7 +788,7 @@ class TMDB_API(object):
             host = TMDB_API.tmdb_api_key["host"]
             query = quote(title.encode("utf-8"))
             api_key=TMDB_API.tmdb_api_key["key"]
-            lang = TMDB_API.lang
+            lang = TMDB_API.get_lang()
             url = f"http://{host}/3/search/{media_type}?query={query}&api_key={api_key}&language={lang}"
             for k, v in kwargs.items():
                 if k == 'include_image_language':
@@ -851,7 +868,7 @@ class TMDB_API(object):
                         + str(r["id"])
                         + "?api_key="
                         + TMDB_API.tmdb_api_key["key"]
-                        + "&language=" + TMDB_API.lang
+                        + "&language=" + TMDB_API.get_lang()
                         + f"&append_to_response={append_to_response}"
                     )
                     for k, v in kwargs.items():
@@ -877,7 +894,7 @@ class TMDB_API(object):
             + imdb
             + "?external_source=imdb_id&api_key="
             + TMDB_API.tmdb_api_key["key"]
-            + "&language=" + TMDB_API.lang
+            + "&language=" + TMDB_API.get_lang()
         )
         url += "&append_to_response=credits,videos,external_ids"
         debug(url)
@@ -888,7 +905,7 @@ class TMDB_API(object):
         url = (
             "http://%s/3/movie/popular?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
-            + "&language=" + TMDB_API.lang
+            + "&language=" + TMDB_API.get_lang()
         )
         url += "&page={}".format(page)
         return TMDB_API.tmdb_query(url)
@@ -898,7 +915,7 @@ class TMDB_API(object):
         url = (
             "http://%s/3/discover/movie?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
-            + "&language=" + TMDB_API.lang
+            + "&language=" + TMDB_API.get_lang()
         )
         # url += '&sort_by=popularity.desc'
         # url += '&sort_by=vote_average.desc&vote_count.gte=50'
@@ -912,7 +929,7 @@ class TMDB_API(object):
         url = (
             "http://%s/3/tv/popular?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
-            + "&language=" + TMDB_API.lang
+            + "&language=" + TMDB_API.get_lang()
         )
         url += "&page={}".format(page)
         return TMDB_API.tmdb_query(url, "tv")
@@ -922,7 +939,7 @@ class TMDB_API(object):
         url = (
             "http://%s/3/movie/top_rated?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
-            + "&language=" + TMDB_API.lang
+            + "&language=" + TMDB_API.get_lang()
         )
         url += "&page={}".format(page)
         return TMDB_API.tmdb_query(url)
@@ -932,7 +949,7 @@ class TMDB_API(object):
         url = (
             "http://%s/3/tv/top_rated?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
-            + "&language=" + TMDB_API.lang
+            + "&language=" + TMDB_API.get_lang()
         )
         url += "&page={}".format(page)
         return TMDB_API.tmdb_query(url, "tv")
@@ -946,7 +963,7 @@ class TMDB_API(object):
             + str(tmdb_id)
             + "/similar?api_key="
             + TMDB_API.tmdb_api_key["key"]
-            + "&language=" + TMDB_API.lang
+            + "&language=" + TMDB_API.get_lang()
         )
         url += "&page={}".format(page)
         log.debug(url)
@@ -1010,7 +1027,7 @@ class TMDB_API(object):
                     + str(tmdb_id) \
                     + "?api_key=" \
                     + TMDB_API.tmdb_api_key["key"] \
-                    + "&language=" + TMDB_API.lang \
+                    + "&language=" + TMDB_API.get_lang() \
                     + "&append_to_response=" + append_to_response
         try:
             if url_:

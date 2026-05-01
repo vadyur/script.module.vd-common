@@ -14,8 +14,15 @@
     <extension point="xbmc.python.module" library="lib"/>
     <extension point="xbmc.addon.metadata">
     	<platform>all</platform>
-        <assets>
+    <assets>
           <icon>icon.png</icon>
         </assets>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <platform>all</platform>
+        <summary lang="ru">VDLib™</summary>
+        <summary lang="en">VDLib™</summary>
+        <description lang="ru">Это модуль, предоставляющий базовые утилиты и функции для различных аддонов Kodi, например, обработку метаданных, работу с торентами и API.</description>
+        <description lang="en">This module provides basic utilities and functions for various Kodi add-ons, such as metadata handling, torrent processing, and API interaction.</description>
     </extension>
 </addon>

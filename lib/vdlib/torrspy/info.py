@@ -12,6 +12,10 @@ from vdlib.util import filesystem
 addon = xbmcaddon.Addon('script.service.torrspy')
 addon_id = addon.getAddonInfo('id')
 
+def translate(id: int):
+    # log('{} {}'.format(id, addon.getLocalizedString(id)))
+    return addon.getLocalizedString(id)
+
 def addon_title():
     return addon.getAddonInfo('name')
 
@@ -33,30 +37,29 @@ def add_all_from_torserver():
 def settings_get_save_position():
     return addon_setting('save_position') == 'true'
 
-# спросить|автоматически|нет
+# 0 - спросить|1 - автоматически|2 - нет
 def add_movies_to_lib():
     s = decode_string(addon_setting('add_movies_to_lib'))
 
-    if s == u'автоматически':
+    if s == 1:  # автоматически
         return True
 
-    if s == u'нет':
+    if s == 2: # нет
         return False
 
-    return xbmcgui.Dialog().yesno(addon_title(),
-            u'Кино не досмотрено. Сохранить его в медиатеку для последующего просмотра?')
+    return xbmcgui.Dialog().yesno(addon_title(), translate(32032))
 
+# 0 - спросить|1 - автоматически|2 - нет
 def add_tvshows_to_lib():
     s = decode_string(addon_setting('add_tvshows_to_lib'))
 
-    if s == u'автоматически':
+    if s == 1: # автоматически
         return True
 
-    if s == u'нет':
+    if s == 2: # нет
         return False
 
-    return xbmcgui.Dialog().yesno(addon_title(),
-        u'Этот сериал не в медиатеке, сохранить для последующего просмотра?')
+    return xbmcgui.Dialog().yesno(addon_title(), translate(32033))
 
 
 def make_path_to_base_relative(path):

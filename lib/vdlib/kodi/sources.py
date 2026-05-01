@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from ..util import filesystem, log
+from ..util import filesystem, log, lang
 
 from .kodidb import VideoDatabase
 from .compat import translatePath
@@ -9,10 +9,11 @@ SOURCES_XML_PATH = 'special://userdata/sources.xml'
 SOURCES_REAL_PATH = translatePath(SOURCES_XML_PATH)
 
 scrapper_settings = {
-	'metadata.themoviedb.org': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="fanart">true</setting><setting id="landscape" default="true">false</setting><setting id="trailer">true</setting><setting id="language">ru</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="RatingS" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="certprefix" default="true">Rated </setting></settings>',
-	'metadata.themoviedb.org.python': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="language">ru-RU</setting><setting id="searchlanguage" default="true">en-US</setting><setting id="fanart" default="true">true</setting><setting id="landscape" default="true">true</setting><setting id="trailer" default="true">true</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="certprefix" default="true">Rated </setting><setting id="RatingS" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="traktanyway" default="true">false</setting><setting id="multiple_studios" default="true">false</setting><setting id="add_tags" default="true">true</setting><setting id="lastUpdated">1682607879.690234</setting><setting id="originalUrl">https://image.tmdb.org/t/p/original</setting><setting id="previewUrl">https://image.tmdb.org/t/p/w780</setting><setting id="enable_fanarttv_artwork" default="true">true</setting><setting id="fanarttv_language" default="true">en</setting><setting id="prioritize_fanarttv_artwork" default="true">false</setting><setting id="fanarttv_clientkey" default="true" /></settings>',
-	'metadata.tvshows.themoviedb.org': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="language" default="true">ru</setting><setting id="titleprefix" default="true">Episode </setting><setting id="titlesuffix" default="true" /><setting id="tmdbart">true</setting><setting id="fanarttvart">true</setting><setting id="tvdbwidebanners">true</setting><setting id="RatingS" default="true">Themoviedb</setting><setting id="fallback">true</setting><setting id="alsoimdb" default="true">false</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="certprefix" default="true" /></settings>',
-	'metadata.tvshows.themoviedb.org.python': '<settings version="2"><setting id="language">ru-RU</setting><setting id="languageDetails">ru-RU</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="usecertprefix" default="true">true</setting><setting id="certprefix" default="true">Rated </setting><setting id="keeporiginaltitle" default="true">false</setting><setting id="cat_landscape" default="true">true</setting><setting id="studio_country" default="true">false</setting><setting id="enab_trailer" default="true">true</setting><setting id="players_opt" default="true">Tubed</setting><setting id="ratings" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="traktanyway" default="true">false</setting><setting id="tmdbanyway" default="true">true</setting><setting id="enable_fanarttv" default="true">true</setting><setting id="fanarttv_clientkey" default="true" /><setting id="verboselog" default="true">false</setting><setting id="lastUpdated">1682607891.822989</setting><setting id="originalUrl">https://image.tmdb.org/t/p/original</setting><setting id="previewUrl">https://image.tmdb.org/t/p/w780</setting></settings>'
+    k: v.replace('%LNG%', lang.get_language(True)) for k, v in {
+	'metadata.themoviedb.org': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="fanart">true</setting><setting id="landscape" default="true">false</setting><setting id="trailer">true</setting><setting id="language">%LNG%</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="RatingS" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="certprefix" default="true">Rated </setting></settings>',
+	'metadata.themoviedb.org.python': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="language">%LNG%</setting><setting id="searchlanguage" default="true">en-US</setting><setting id="fanart" default="true">true</setting><setting id="landscape" default="true">true</setting><setting id="trailer" default="true">true</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="certprefix" default="true">Rated </setting><setting id="RatingS" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="traktanyway" default="true">false</setting><setting id="multiple_studios" default="true">false</setting><setting id="add_tags" default="true">true</setting><setting id="lastUpdated">1682607879.690234</setting><setting id="originalUrl">https://image.tmdb.org/t/p/original</setting><setting id="previewUrl">https://image.tmdb.org/t/p/w780</setting><setting id="enable_fanarttv_artwork" default="true">true</setting><setting id="fanarttv_language" default="true">en</setting><setting id="prioritize_fanarttv_artwork" default="true">false</setting><setting id="fanarttv_clientkey" default="true" /></settings>',
+	'metadata.tvshows.themoviedb.org': '<settings version="2"><setting id="keeporiginaltitle" default="true">false</setting><setting id="language" default="true">%LNG%</setting><setting id="titleprefix" default="true">Episode </setting><setting id="titlesuffix" default="true" /><setting id="tmdbart">true</setting><setting id="fanarttvart">true</setting><setting id="tvdbwidebanners">true</setting><setting id="RatingS" default="true">Themoviedb</setting><setting id="fallback">true</setting><setting id="alsoimdb" default="true">false</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="certprefix" default="true" /></settings>',
+	'metadata.tvshows.themoviedb.org.python': '<settings version="2"><setting id="language">%LNG%</setting><setting id="languageDetails">%LNG%</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="usecertprefix" default="true">true</setting><setting id="certprefix" default="true">Rated </setting><setting id="keeporiginaltitle" default="true">false</setting><setting id="cat_landscape" default="true">true</setting><setting id="studio_country" default="true">false</setting><setting id="enab_trailer" default="true">true</setting><setting id="players_opt" default="true">Tubed</setting><setting id="ratings" default="true">TMDb</setting><setting id="imdbanyway" default="true">false</setting><setting id="traktanyway" default="true">false</setting><setting id="tmdbanyway" default="true">true</setting><setting id="enable_fanarttv" default="true">true</setting><setting id="fanarttv_clientkey" default="true" /><setting id="verboselog" default="true">false</setting><setting id="lastUpdated">1682607891.822989</setting><setting id="originalUrl">https://image.tmdb.org/t/p/original</setting><setting id="previewUrl">https://image.tmdb.org/t/p/w780</setting></settings>'}.items()
 }
 
 def need_create(settings):
@@ -38,7 +39,11 @@ def need_create(settings):
 
 	return False
 
-def create_movies_and_tvshows(path, scrapper='metadata.local', scrapper_tv='metadata.local', suffix=''):
+def create_movies_and_tvshows(path,
+							  scrapper='metadata.local',
+							  scrapper_tv='metadata.local',
+							  suffix='',
+							  translates={}):
 	sources = Sources()
 
 	def base_path():
@@ -47,12 +52,13 @@ def create_movies_and_tvshows(path, scrapper='metadata.local', scrapper_tv='meta
 	path1 = filesystem.join(base_path(), 'Movies')
 	if not filesystem.exists(path1):
 		filesystem.makedirs(path1)
-	sources.add_video(path1, u'Фильмы', 'movies', scrapper, suffix)
+
+	sources.add_video(path1, translates.get('movies', 'Фильмы'), 'movies', scrapper, suffix)
 
 	path2 = filesystem.join(base_path(), 'TVShows')
 	if not filesystem.exists(path2):
 		filesystem.makedirs(path2)
-	sources.add_video(path2, u'Сериалы', 'tvshows', scrapper_tv, suffix)
+	sources.add_video(path2, translates.get('tvshows', 'Сериалы'), 'tvshows', scrapper_tv, suffix)
 
 	return True
 
@@ -176,11 +182,15 @@ class Sources(object):
 				if media_type is not None and m_type != media_type:
 					continue
 				for s in t.findall('source'):
-					label = s.find('name').text
+					def elem(sId: str) -> str:
+						t = s.find(sId)
+						return t.text if t else ''	# type: ignore
+
+					label = elem('name')
 					if normalize:
-						path = filesystem.normpath(s.find('path').text)
+						path = filesystem.normpath(elem('path'))
 					else:
-						path = s.find('path').text
+						path = elem('path')
 					self.sources.append(Source(m_type, path, label))
 		return self.sources
 

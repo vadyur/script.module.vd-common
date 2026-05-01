@@ -36,7 +36,7 @@ def ensure_unicode(string, encoding=get_filesystem_encoding()):
 			string = string.decode(encoding)
 	else:
 		string = decode_string(string)
-		
+
 	return string
 
 _cwd = ensure_unicode(os.getcwd(), get_filesystem_encoding())
@@ -213,7 +213,7 @@ def relpath(path, start=getcwd()):
 def normpath(path):
 	return ensure_unicode(os.path.normpath(get_path(path)), get_filesystem_encoding())
 
-	
+
 def fopen(path, mode):
 	if use_xbmcvfs:
 		try:
@@ -290,7 +290,7 @@ def fopen(path, mode):
 	else:
 		return open(real_path(path), mode)
 
-	
+
 def join(path, *paths):
 	path = _get_path(path, use_unc_path=False)
 	fpaths = []
@@ -397,46 +397,5 @@ def makeLegalFilename(filename):
 
 	for ch in illegal_chars:
 		filename = filename.replace(ch, '')
-	
+
 	return ensure_unicode(filename.rstrip(' .'))
-
-
-def test():	
-
-	tst_name = u'/storage/mnt/D/MA/Videos/TVShows/Звездный путь Дискавери\\Season 2\\10. episode_s02e10.strm'
-	tst_nam2 = u'd:/mnt/D/MA/Videos/TVShows/Звездный путь Дискавери\\Season 2\\10. episode_s02e10.strm'
-	tst_nam3 = u'\\\\media\mnt/D/MA/Videos/TVShows/Звездный путь Дискавери\\Season 2\\10. episode_s02e10.strm'
-	
-	tst_name = normseps(tst_name)
-	tst_nam2 = normseps(tst_nam2)
-	tst_nam3 = normseps(tst_nam3)
-	
-
-	log.debug('Filesystem encoding: %s' % get_filesystem_encoding())
-	log.debug('getcwd(): %s' % getcwd().encode('utf-8'))
-	log.debug('relpath(getcwd(), ".."): %s' % relpath(getcwd(), "..").encode('utf-8'))
-	
-	subpath = u'Подпапка'
-	subpath2 = u'файл.ext'
-
-	with save_make_chdir_context(join('special://temp', subpath)):
-		log.debug('aaaaa')
-		#raise Exception('save_make_chdir')
-		#log.debug('bbbbb')
-	
-	fullpath = join(getcwd(), subpath, subpath2)
-	log.debug('subpath: %s' % subpath.encode('utf-8'))
-	log.debug('subpath2: %s' % subpath2.encode('utf-8'))
-	log.debug('join(getcwd(), subpath, subpath2): %s' % fullpath.encode('utf-8'))
-
-	log.debug(u'dirname(%s): %s' % (fullpath, dirname(fullpath)))
-
-	remote_file = u'smb://192.168.21.33/Incoming/test.txt'
-	if isfile(remote_file):
-		with fopen(remote_file, "r") as f:
-			log.debug(f.read())
-
-
-if __name__ == '__main__':
-	__DEBUG__ = True
-	test()

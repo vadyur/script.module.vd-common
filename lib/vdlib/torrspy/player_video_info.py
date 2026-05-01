@@ -59,28 +59,3 @@ class PlayerVideoInfo(object):
         bb = base64.b64decode(s)
         d = pickle.loads(bb)
         self.__dict__.update(d)
-
-def test():
-    video_info = {
-        'originaltitle': "FBI",
-        'title': u"ФБР",
-        'year': 2018
-    }
-
-    pvi = PlayerVideoInfo(None)
-    pvi.video_info = video_info
-    pvi.time       = 1234
-    pvi.total_time = 2345
-    pvi.media_type = 'tvshow'
-    pvi.play_url   = 'http://host:8090/dskfhsdk/hdsfkhs'
-    pvi.sort_index = 1
-
-    s = pvi.dumps()
-    pvi2 = PlayerVideoInfo(None)
-    pvi2.loads(s)
-
-    pass
-
-
-if __name__ == '__main__':
-    test()

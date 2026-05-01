@@ -730,23 +730,14 @@ def get_tmdb_lang():
     except Exception:
         pass
 
-    # 2. Kodi language
-    try:
-        import xbmc
-        lang = xbmc.getLanguage(xbmc.ISO_639_1)
+    from vdlib.util.lang import get_language
+    return get_language()
 
-        if not lang:
-            lang = "en"
-
-        return lang
-
-    except Exception:
-        return "ru"
 
 class TMDB_API(object):
     api_url = "https://api.themoviedb.org/3"
     tmdb_api_key = get_tmdb_api_key()
-    
+
     @staticmethod
     def get_lang():
         return get_tmdb_lang()

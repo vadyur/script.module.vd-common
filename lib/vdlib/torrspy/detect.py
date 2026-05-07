@@ -224,7 +224,7 @@ def find_tmdb_movie_item(video_info, art={}):
     def find_by(title):
         # null = без языка, остальные — коды ISO 639-1 для постеров/фонов
         image_langs = 'null,en,ru,ro,uk,de,fr,es,it,pt,pl,tr,ja,ko,zh,hu,cs,sk'
-        results = TMDB_API.search(title, append_to_response='images,external_ids,credits', include_image_language=image_langs)
+        results = TMDB_API.search(title, append_to_response='images,external_ids,credits', max_pages=3, include_image_language=image_langs)
         if len(results) == 1:
             result = results[0]     # type: tmdb_movie_item
             return result

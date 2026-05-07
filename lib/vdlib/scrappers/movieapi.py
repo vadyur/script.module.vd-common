@@ -831,23 +831,42 @@ class TMDB_API(object):
 
         result = tmdb_query_result()
         from ..util import HTTPError, URLError
-        try:
-            debug("Request is: " + url)
-            data = json.load(urlopen(url))
-            debug("data is: {}".format(data))
-        except (HTTPError, URLError) as e:
-            debug("Error TMDB request")
-            debug(e)
-            return tmdb_query_result()
 
-        if "total_pages" in data:
-            result.total_pages = data["total_pages"]
+        max_pages = int(kwargs.get("max_pages", 1))
+        
+        all_data = []
+        
+        for page in range(1, max_pages + 1):
+            
+            page_url = url
+            
+            if "page=" in page_url:
+                page_url = re.sub(r'page=\d+', f'page={page}', page_url)
+            else:
+                page_url += f"&page={page}"
+                
+            try:
+                debug("Request is: " + page_url)
+                
+                data = json.load(urlopen(page_url))
+                
+                debug("data is: {}".format(data))
+                
+                all_data.append(data)
+                
+            except (HTTPError, URLError) as e:
+                debug("Error TMDB request")
+                debug(e)
+                continue
+                
+        if all_data:
+             result.total_pages = all_data[0].get("total_pages")
 
-        for tag in ["results", "movie_results", "tv_results"]:
-            if tag in data:
+        for data in all_data:
+            for tag in ["results", "movie_results", "tv_results"]:
+                if tag not in data:
+                    continue
                 for r in data[tag]:
-                    if not r["overview"]:
-                        continue
 
                     if "_results" in tag:
                         type = tag.replace("_results", "")

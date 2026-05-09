@@ -41,10 +41,10 @@ def settings_get_save_position():
 def add_movies_to_lib():
     s = decode_string(addon_setting('add_movies_to_lib'))
 
-    if s == 1:  # автоматически
+    if s == "1":  # автоматически
         return True
 
-    if s == 2: # нет
+    if s == "2": # нет
         return False
 
     return xbmcgui.Dialog().yesno(addon_title(), translate(32032))
@@ -53,10 +53,10 @@ def add_movies_to_lib():
 def add_tvshows_to_lib():
     s = decode_string(addon_setting('add_tvshows_to_lib'))
 
-    if s == 1: # автоматически
+    if s == "1": # автоматически
         return True
 
-    if s == 2: # нет
+    if s == "2": # нет
         return False
 
     return xbmcgui.Dialog().yesno(addon_title(), translate(32033))

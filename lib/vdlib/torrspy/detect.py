@@ -139,13 +139,14 @@ def extract_original_title_year(title):
         original_title = parts[1] if len(parts) >= 2 else None
 
         m = re.search(r'/ (19[0-9][0-9]|20[0-9][0-9]) /', source)
+        found_date = _find_date_period(source)
         if m:
             year = m.group(1)
             parts = source.split(m.group(0))[0]
             parts = parts.split('/')
             original_title = parts[-1]
-        elif _find_date_period(source):
-            year = _find_date_period(source)[0]
+        elif found_date:
+            year = found_date[0]
         else:
             for part in reversed(parts[1:]):
                 m = re.search(year_pattern, part.strip())
@@ -246,19 +247,37 @@ def find_tmdb_movie_item(video_info, art={}):
             'title': str_func
         }
 
+        def filter_func(res):
+            tmdb_info = res.get_info()
+            tmdb_field = tmdb_info.get(field)
+            video_info_field = video_info.get(field)
+            func = filters[field]
+            return func(tmdb_field, video_info_field)
+
+        weights = {}
+        for item in results:
+            id = item.json_data_.get('id')
+            weights[id] = 1
+
         for field in filters:
-            def filter_func(res):
-                tmdb_info = res.get_info()
-                return filters[field](tmdb_info.get(field), video_info.get(field))
             if field in video_info:
                 filtered = list(filter(filter_func, results))
                 if len(filtered) == 1:
-                    results = filtered
-                    break
+                    return filtered[0]
+                for item in filtered:
+                    id = item.json_data_.get('id')
+                    weights[id] *= 2
 
-        if len(results):
-            result = results[0] # type: tmdb_movie_item
-            return result
+        # find item with max weights
+        max_item = None
+        for k, v in weights.items():
+            if max_item is None or v > weights[max_item]:
+                max_item = k
+
+        for item in results:
+            if item.json_data_.get('id') == max_item:
+                return item
+
 
     for field in ['originaltitle', 'title']:
         title = video_info.get(field)

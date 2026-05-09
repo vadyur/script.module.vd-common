@@ -804,7 +804,6 @@ class TMDB_API(object):
         class tmdb_query_result(object):
             def __init__(self):
                 self.result = []
-                self.total_pages = None
 
             def append(self, item):
                 self.result.append(item)
@@ -831,37 +830,47 @@ class TMDB_API(object):
 
         result = tmdb_query_result()
         from ..util import HTTPError, URLError
-        try:
-            debug("Request is: " + url)
-            data = json.load(urlopen(url))
-            debug("data is: {}".format(data))
-        except (HTTPError, URLError) as e:
-            debug("Error TMDB request")
-            debug(e)
-            return tmdb_query_result()
 
-        if "total_pages" in data:
-            result.total_pages = data["total_pages"]
+        all_data = []
+        pages_count = 1
+        page = 1
 
-        for tag in ["results", "movie_results", "tv_results"]:
-            if tag in data:
+        while page <= pages_count:
+            page_url = url
+            if page > 1:
+                page_url += f"&page={page}"
+
+            try:
+                debug("Request is: " + page_url)
+                data = json.load(urlopen(page_url))
+                debug("data is: {}".format(data))
+                all_data.append(data)
+                pages_count = data.get("total_pages", 1)
+
+            except (HTTPError, URLError) as e:
+                debug("Error TMDB request")
+                debug(e)
+                continue
+
+            finally:
+                page += 1
+
+        def make_url(type, id):
+            api_key = TMDB_API.tmdb_api_key["key"]
+            lang = TMDB_API.get_lang()
+            host = TMDB_API.tmdb_api_key["host"]
+            return f"http://{host}/3/{type}/{id}?api_key={api_key}&language={lang}&append_to_response={append_to_response}"
+
+        for data in all_data:
+            for tag in ["results", "movie_results", "tv_results"]:
+                if tag not in data:
+                    continue
                 for r in data[tag]:
-                    if not r["overview"]:
-                        continue
 
                     if "_results" in tag:
                         type = tag.replace("_results", "")
 
-                    url2 = (
-                        "http://%s/3/" % TMDB_API.tmdb_api_key["host"]
-                        + type
-                        + "/"
-                        + str(r["id"])
-                        + "?api_key="
-                        + TMDB_API.tmdb_api_key["key"]
-                        + "&language=" + TMDB_API.get_lang()
-                        + f"&append_to_response={append_to_response}"
-                    )
+                    url2 = make_url(type, r["id"])
                     for k, v in kwargs.items():
                         url2 += f"&{k}={v}"
 

@@ -2,6 +2,7 @@
 
 import json
 
+from vdlib.kodi.video_info import VideoInfo
 import xbmc
 import xbmcaddon
 import xbmcgui
@@ -97,7 +98,7 @@ def get_video_info_path(hash, create_path=False):
     filename = '{}.video_info.json'.format(hash)
     return filesystem.join(path, filename)
 
-def load_video_info(hash):
+def load_video_info(hash) -> VideoInfo:
     video_info_path = get_video_info_path(hash)
 
     log(f"video_info_path: {video_info_path}")

@@ -27,7 +27,7 @@ class PlayerVideoInfo(object):
                 self.time       = self.player.getTime()
                 self.total_time = self.player.getTotalTime()
 
-                self.video_info = self.player.getVideoInfo()
+                self.video_info = self.player.getVideoInfo() # type: ignore
                 self.media_type = video_info_tag.getMediaType()
 
                 self.play_url   = self.player.getPlayingFile()
@@ -53,7 +53,7 @@ class PlayerVideoInfo(object):
         if isinstance(s, str):
             return s
         else:
-            return s.decode('ascii')
+            return s.decode('ascii') # type: ignore
 
     def loads(self, s):
         bb = base64.b64decode(s)

@@ -1,6 +1,7 @@
 from torrserve_stream.engine import Engine
 from torrserve_stream.settings import Settings
 
+from vdlib.kodi.video_info import VideoInfo
 from vdlib.util import filesystem
 
 from .player_video_info import PlayerVideoInfo
@@ -15,9 +16,9 @@ def log(s):
 def save_movie(player_video_info):
     # type: (PlayerVideoInfo) -> None
 
-    video_info = player_video_info.video_info
-    play_url = player_video_info.play_url
-    sort_index = player_video_info.sort_index
+    video_info: VideoInfo = player_video_info.video_info # type: ignore
+    play_url: str = player_video_info.play_url # type: ignore
+    sort_index: int = player_video_info.sort_index # type: ignore
 
     original_title = video_info.get('originaltitle')
     year = video_info.get('year')
@@ -37,7 +38,7 @@ def save_movie(player_video_info):
 
             update_library(make_path_to_base_relative('Movies'), on_update_library)
 
-def save_movie_strm(play_url, sort_index, original_title, year):
+def save_movie_strm(play_url: str, sort_index: int, original_title: str, year: int):
     from vdlib.util.string import decode_string
     name = u'{} ({})'.format(
                 decode_string(original_title),
@@ -57,17 +58,17 @@ def get_movies_by(dirname, filename, fields=["file"]):
     result = VideoLibrary.GetMovies(filter=filter, properties=fields)
     return result
 
-def set_movie_resume_playcount(movieid, player_video_info):
-    # type: (int, PlayerVideoInfo) -> None
+def set_movie_resume_playcount(movieid: int, player_video_info: PlayerVideoInfo):
     from vdlib.kodi.jsonrpc_requests import VideoLibrary
-    percent = player_video_info.time / player_video_info.total_time * 100
-    if player_video_info.time > 180:
-        if percent < 90:
-            resume = {'position': player_video_info.time,
-                         'total': player_video_info.total_time}
-            result = VideoLibrary.SetMovieDetails(movieid=movieid,resume=resume)
-        else:
-            result = VideoLibrary.SetMovieDetails(movieid=movieid,playcount=1)
+    if player_video_info.time is not None and player_video_info.total_time:
+        percent = player_video_info.time / player_video_info.total_time * 100
+        if player_video_info.time > 180:
+            if percent < 90:
+                resume = {'position': player_video_info.time,
+                            'total': player_video_info.total_time}
+                result = VideoLibrary.SetMovieDetails(movieid=movieid,resume=resume)
+            else:
+                result = VideoLibrary.SetMovieDetails(movieid=movieid,playcount=1)
     pass
 
 def update_library(path=None, on_update=None):
@@ -135,8 +136,7 @@ def find_file_filter(dirname, filename):
             ]}
     return filter
 
-def save_tvshow(player_video_info):
-    # type: (PlayerVideoInfo) -> None
+def save_tvshow(player_video_info: PlayerVideoInfo):
     video_info = player_video_info.video_info
     if not video_info:
         log('No video info found in player_video_info')
@@ -237,19 +237,18 @@ def get_episodes_by(dirname, filename, fields=["file"]):
     return result
 
 
-def set_episode_resume_playcount(episodeid, player_video_info):
-    # type: (int, PlayerVideoInfo) -> None
+def set_episode_resume_playcount(episodeid: int, player_video_info: PlayerVideoInfo):
     from vdlib.kodi.jsonrpc_requests import VideoLibrary
 
-    player_video_info = player_video_info  # type: PlayerVideoInfo
-    percent = player_video_info.time / player_video_info.total_time * 100
-    if player_video_info.time > 180:
-        if percent < 90:
-            resume = {'position': player_video_info.time,
-                         'total': player_video_info.total_time}
-            result = VideoLibrary.SetEpisodeDetails(episodeid=episodeid,resume=resume)
-        else:
-            result = VideoLibrary.SetEpisodeDetails(episodeid=episodeid,playcount=1)
+    if player_video_info.time is not None and player_video_info.total_time:
+        percent = player_video_info.time / player_video_info.total_time * 100
+        if player_video_info.time > 180:
+            if percent < 90:
+                resume = {'position': player_video_info.time,
+                            'total': player_video_info.total_time}
+                result = VideoLibrary.SetEpisodeDetails(episodeid=episodeid,resume=resume)
+            else:
+                result = VideoLibrary.SetEpisodeDetails(episodeid=episodeid,playcount=1)
     pass
 
 def get_hash_from_strm(path):

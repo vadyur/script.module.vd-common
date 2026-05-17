@@ -413,19 +413,13 @@ class MyShowsAPI(object):
 		'started': 'premiered'
 	}
 
-	def __init__(self, title, ruTitle, imdbId=None, kinopoiskId=None):
+	def __init__(self, title, ruTitle, imdbId=None):
 		if imdbId:
 			try:
-				imdbId = int(re.search('(\d+)', imdbId).group(1))
+				imdbId = int(re.search(r'(\d+)', imdbId).group(1)) # type: ignore
 				debug(imdbId)
 			except:
 				imdbId = None
-
-		if kinopoiskId:
-			try:
-				kinopoiskId = int(re.search('(\d+)', kinopoiskId).group(1))
-			except:
-				kinopoiskId = None
 
 		from ..util import quote
 		base_url = 'http://api.myshows.me/shows/search/?q='
@@ -443,7 +437,7 @@ class MyShowsAPI(object):
 		if self.valid():
 			debug(url)
 			# debug(unicode(json.dumps(self.myshows, sort_keys=True, indent=4, separators=(',', ': ')), 'unicode-escape').encode('utf-8'))
-			id = self.get_myshows_id(imdbId, kinopoiskId)
+			id = self.get_myshows_id(imdbId)
 			debug(id)
 			if id != 0:
 				url = 'http://api.myshows.me/shows/' + str(id)
@@ -454,7 +448,7 @@ class MyShowsAPI(object):
 		debug(str(self.valid()))
 		debug(str(self.valid_ep()))
 
-	def get_myshows_id(self, imdbId, kinopoiskId):
+	def get_myshows_id(self, imdbId):
 		# try:
 		if True:
 			if self.valid():
@@ -465,11 +459,7 @@ class MyShowsAPI(object):
 						if section['imdbId'] == imdbId:
 							return section['id']
 
-					if kinopoiskId:
-						if section['kinopoiskId'] == kinopoiskId:
-							return section['id']
-
-					if imdbId is None and kinopoiskId is None:
+					if imdbId is None:
 						return section['id']
 		else:
 			# except:
@@ -557,21 +547,20 @@ class TVShowAPI(TheTVDBAPI, MyShowsAPI):
 	imdb_api	= {}
 
 	@staticmethod
-	def get_by(title, ruTitle, imdbId=None, kinopoiskId=None):
+	def get_by(title, ruTitle, imdbId=None):
 		if imdbId and imdbId in TVShowAPI.imdb_api:
 			return TVShowAPI.imdb_api[imdbId]
 
-		api = TVShowAPI(title, ruTitle, imdbId, kinopoiskId)
+		api = TVShowAPI(title, ruTitle, imdbId)
 		if imdbId:
 			TVShowAPI.imdb_api[imdbId] = api
 
 		return api
 
 
-	def __init__(self, title, ruTitle, imdbId=None, kinopoiskId=None):
+	def __init__(self, title, ruTitle, imdbId=None):
 		TheTVDBAPI.__init__(self, imdbId)
-		MyShowsAPI.__init__(self, title, ruTitle, imdbId, kinopoiskId)
-		#KinopoiskAPI.__init__(self, kinopoiskId)
+		MyShowsAPI.__init__(self, title, ruTitle, imdbId)
 
 
 	def Title(self):

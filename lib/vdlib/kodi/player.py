@@ -2,7 +2,7 @@
 
 from ..util.string import decode_string
 from ..torrent import torrent2httpplayer, torrserverplayer
-# from ..torrent import aceplayer, yatpplayer, 
+# from ..torrent import aceplayer, yatpplayer,
 import time, sys
 import xbmc, xbmcgui, xbmcplugin
 from ..util.log import debug
@@ -10,7 +10,7 @@ from ..util.log import debug
 class OurDialogProgress(xbmcgui.DialogProgress):
     def create(self, heading, line1="", line2="", line3=""):
         try:
-            xbmcgui.DialogProgress.create(self, heading, line1, line2, line3)
+            xbmcgui.DialogProgress.create(self, heading, line1, line2, line3) # type: ignore
         except TypeError:
             message = line1
             if line2:
@@ -21,7 +21,7 @@ class OurDialogProgress(xbmcgui.DialogProgress):
 
     def update(self, percent, line1="", line2="", line3=""):
         try:
-            xbmcgui.DialogProgress.update(self, int(percent), line1, line2, line3)
+            xbmcgui.DialogProgress.update(self, int(percent), line1, line2, line3) # type: ignore
         except TypeError:
             message = line1
             if line2:
@@ -36,7 +36,7 @@ def _log(s):
 
 def play_torrent(path, settings, info_dialog, title_dialog, video_info=None, art=None):
 	player = None
-	
+
 	try:
 		_log(path)
 		torrent_player = settings.get_setting('torrent_player')
@@ -60,7 +60,10 @@ def play_torrent(path, settings, info_dialog, title_dialog, video_info=None, art
 			info_dialog.update(0, u'Проверяем файлы', ' ', ' ')
 			time.sleep(1)
 
-		files = player.GetLastTorrentData()['files']
+		td = player.GetLastTorrentData()
+		if not td:
+			return
+		files = td['files']
 		playable_item = files[0]
 
 		player.StartBufferFile(0)
@@ -86,6 +89,9 @@ def play_torrent(path, settings, info_dialog, title_dialog, video_info=None, art
 		playable_url = player.GetStreamURL(playable_item)
 		_log(playable_url)
 
+		if not playable_url:
+			return
+
 		handle = int(sys.argv[1])
 		list_item = xbmcgui.ListItem(path=playable_url)
 
@@ -93,13 +99,13 @@ def play_torrent(path, settings, info_dialog, title_dialog, video_info=None, art
 			if isinstance(video_info, dict):
 				list_item.setInfo('video', video_info)
 			elif callable(video_info):
-				list_item.setArt(video_info())
+				list_item.setInfo('video', video_info()) # type: ignore
 
 		if art:
 			if isinstance(art, dict):
 				list_item.setArt(art)
 			elif callable(art):
-				list_item.setArt(art())
+				list_item.setArt(art()) # type: ignore
 
 		xbmc_player = xbmc.Player()
 		xbmcplugin.setResolvedUrl(handle, True, list_item)
@@ -120,6 +126,6 @@ def play_torrent(path, settings, info_dialog, title_dialog, video_info=None, art
 		print_tb(e)
 
 	finally:
-		if player:		
+		if player:
 			player.close()
-	#return url	
+	#return url

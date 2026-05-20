@@ -4,7 +4,7 @@ import re
 
 from vdlib.kodi.video_info import Art, VideoInfo
 from vdlib.scrappers.movieapi import TMDB_API, tmdb_movie_item, tmdb_query_result
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 videoextensions = [
     '.m4v', '.3g2', '.3gp', '.nsv', '.tp', '.ts', '.ty', '.strm', '.pls', '.rm', '.rmvb', '.mpd', '.m3u', '.m3u8', '.ifo', '.mov', '.qt', '.divx', '.xvid',
@@ -207,7 +207,7 @@ def get_tmdb_movie_item(imdbnumber) -> tmdb_movie_item:
 def find_tmdb_movie_item(video_info: VideoInfo, art: Art={}, isTVshow:Optional[bool]=None) -> Optional[tmdb_movie_item]:
     from vdlib.scrappers.movieapi import TMDB_API
 
-    def find_by_art(results: tmdb_query_result, art):
+    def find_by_art(results: List[tmdb_movie_item], art, deep: bool = False) -> Optional[tmdb_movie_item]:
         if 'poster' in art:
             parts = art['poster'].split('/')
             is_tmdb = False
@@ -221,21 +221,22 @@ def find_tmdb_movie_item(video_info: VideoInfo, art: Art={}, isTVshow:Optional[b
                     for item in results:
                         if posterId in item.poster():
                             return item
-                        for img in item.posters():
-                            if posterId in img['file_path']:
-                                return item
 
-    def find_by(title):
+                        if deep:
+                            for img in item.posters():
+                                if posterId in img:
+                                    return item
+
+    def find_by(title) -> Optional[tmdb_movie_item]:
         # null = без языка, остальные — коды ISO 639-1 для постеров/фонов
         image_langs = 'null,en,ru,ro,uk,de,fr,es,it,pt,pl,tr,ja,ko,zh,hu,cs,sk'
         type = 'tv' if isTVshow else None
 
         results = TMDB_API.search(title, type=type, append_to_response='images,external_ids,credits', include_image_language=image_langs)
         if len(results) == 1:
-            result = results[0]     # type: tmdb_movie_item
-            return result
+            return results[0] # type: ignore
 
-        by_art = find_by_art(results, art)
+        by_art = find_by_art(list(results), art)
         if by_art:
             return by_art
 
@@ -278,10 +279,22 @@ def find_tmdb_movie_item(video_info: VideoInfo, art: Art={}, isTVshow:Optional[b
             if max_item is None or v > weights[max_item]:
                 max_item = k
 
+        result: Optional[tmdb_movie_item] = None
         for item in results:
             if item.tmdb_id() == max_item:
-                return item
+                result = item
+                break
 
+        if result:
+            by_art = find_by_art([result], art, deep=True)
+            if by_art:
+                return by_art
+
+        by_art = find_by_art(list(results), art, deep=True)
+        if by_art:
+            return by_art
+
+        return result
 
     for field in ['originaltitle', 'title']:
         title = video_info.get(field)

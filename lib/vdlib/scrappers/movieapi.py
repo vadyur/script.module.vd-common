@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional, TypedDict, Dict
+from typing import Iterator, List, Optional, TypedDict, Dict, Union
 
 from vdlib.kodi.video_info import Art
 from ..util import log
@@ -307,7 +307,8 @@ class tmdb_movie_item(tmdb_movie_item_base):
 
     def posters(self) -> List[str]:
         try:
-            return self._get_json_data().get('images', {}).get('posters', [])
+            _posters = self._get_json_data().get('images', {}).get('posters', [])
+            return [ "http://image.tmdb.org/t/p/w500" + img['file_path'] for img in _posters ]
         except BaseException:
             return []
 
@@ -470,28 +471,28 @@ def get_tmdb_lang():
     return get_language()
 
 class tmdb_query_result(object):
-    def __init__(self):
-        self.result = []
+    def __init__(self) -> None:
+        self.result: List[tmdb_movie_item] = []
 
-    def append(self, item):
+    def append(self, item: tmdb_movie_item) -> None:
         self.result.append(item)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[tmdb_movie_item]:
         for x in self.result:
             yield x
 
-    def __add__(self, other):
+    def __add__(self, other: 'tmdb_query_result') -> 'tmdb_query_result':
         r = tmdb_query_result()
         r.result = self.result + other.result
         return r
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.result)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> tmdb_movie_item:
         return self.result[index]
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return len(self.result) != 0
 
     __nonzero__ = __bool__
@@ -714,17 +715,14 @@ class TMDB_API(object):
     def imdb_by_tmdb_search(orig, year):
         try:
             for res in TMDB_API.search(orig):
-                r = res.json_data_
-
-                release_date = r.get("release_date")
-                if year and release_date and year not in release_date:
+                if year and res.year() and year != res.year():
                     continue
 
-                r_title = r.get("title")
-                r_original_title = r.get("original_title")
+                r_title = res.title()
+                r_original_title = res.original_title()
 
                 if orig and (orig == r_title or orig == r_original_title):
-                    return r["imdb_id"]
+                    return res.imdb()
 
         except BaseException as e:
             from log import print_tb

@@ -6,6 +6,7 @@ from ..util.log import debug
 
 from ..util import urlopen
 
+import gzip
 import json, re
 
 import requests
@@ -14,6 +15,15 @@ from ..util.base import clean_html
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.100"
 
+def load_json_url(url):
+    response = urlopen(url)
+    raw = response.read()
+
+    # gzip support
+    if raw[:2] == b'\x1f\x8b':
+        raw = gzip.decompress(raw)
+
+    return json.loads(raw.decode('utf-8'))
 
 def get_tmdb_api_key():
     key = "f090bb54758cabf231fb605d3e3e0468"
@@ -751,7 +761,7 @@ class TMDB_API(object):
             TMDB_API.tmdb_api_key["key"],
             TMDB_API.get_lang()
         )
-        tmdb_data = json.load(urlopen(url))
+        tmdb_data = load_json_url(url)
 
         for type in ["movie", "tv"]:
             try:
@@ -842,7 +852,7 @@ class TMDB_API(object):
 
             try:
                 debug("Request is: " + page_url)
-                data = json.load(urlopen(page_url))
+                data = load_json_url(page_url)
                 debug("data is: {}".format(data))
                 all_data.append(data)
                 pages_count = data.get("total_pages", 1)
@@ -875,7 +885,7 @@ class TMDB_API(object):
                         url2 += f"&{k}={v}"
 
                     try:
-                        data2 = json.load(urlopen(url2))
+                        data2 = load_json_url(url2)
                     except (HTTPError, URLError) as e:
                         debug("Error TMDB request for {}".format(url2))
                         continue
@@ -1031,7 +1041,7 @@ class TMDB_API(object):
                     + "&append_to_response=" + append_to_response
         try:
             if url_:
-                self.tmdb_data = json.load(urlopen(url_))
+                self.tmdb_data = load_json_url(url_)
                 debug("tmdb_data (" + url_ + ") \t\t\t[Ok]")
             else:
                 self.tmdb_data = {}

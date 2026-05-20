@@ -3,7 +3,15 @@ if sys.version_info >= (3, 0):
     from urllib.error import URLError, HTTPError
     from urllib.parse import urljoin, urlparse, urlunparse, urlencode, ParseResult, quote, quote_plus, unquote_plus, parse_qs
     from urllib.request import pathname2url
-    from urllib.request import urlopen
+    from urllib.request import urlopen as _urlopen
+
+    def urlopen(url_or_request, *args, **kwargs):
+        import gzip
+        import io
+        response = _urlopen(url_or_request, *args, **kwargs)
+        if response.info().get('Content-Encoding') == 'gzip':
+            return io.BytesIO(gzip.decompress(response.read()))
+        return response
 else:
     from urlparse import urljoin, urlparse, urlunparse, ParseResult, parse_qs
     from urllib import pathname2url, quote, quote_plus, unquote_plus

@@ -768,7 +768,8 @@ class TMDB_API(object):
                 debug("tmdb_data (" + url_ + ") \t\t\t[Ok]")
             else:
                 self.tmdb_data = {}
-        except:
+        except Exception as e:
+            debug("tmdb_data (" + str(url_) + ") \t\t\t[Error] " + str(e))
             self.tmdb_data = {}
 
     def title(self):

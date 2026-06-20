@@ -8,7 +8,7 @@ from ..util.log import debug
 
 from ..util import urlopen
 
-import json, re
+import json, re, time
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -764,8 +764,17 @@ class TMDB_API(object):
                     + "&append_to_response=" + append_to_response
         try:
             if url_:
-                self.tmdb_data = json.load(urlopen(url_))
-                debug("tmdb_data (" + url_ + ") \t\t\t[Ok]")
+                for attempt in range(3):
+                    try:
+                        self.tmdb_data = json.load(urlopen(url_))
+                        debug("tmdb_data (" + url_ + ") \t\t\t[Ok]")
+                        break
+                    except Exception as e:
+                        if attempt < 2:
+                            debug("tmdb_data (" + str(url_) + ") \t\t\t[Retry " + str(attempt + 1) + "/3] " + str(e))
+                            time.sleep(1)
+                        else:
+                            raise
             else:
                 self.tmdb_data = {}
         except Exception as e:

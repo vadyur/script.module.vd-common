@@ -132,13 +132,13 @@ class tmdb_movie_item_base(object):
 
     def poster(self) -> str:
         try:
-            return "http://image.tmdb.org/t/p/w500" + self._json_data["poster_path"]
+            return "https://image.tmdb.org/t/p/w500" + self._json_data["poster_path"]
         except BaseException:
             return ""
 
     def fanart(self) -> str:
         try:
-            return "http://image.tmdb.org/t/p/original" + self._json_data["backdrop_path"]
+            return "https://image.tmdb.org/t/p/original" + self._json_data["backdrop_path"]
         except BaseException:
             return ""
 
@@ -308,7 +308,7 @@ class tmdb_movie_item(tmdb_movie_item_base):
     def posters(self) -> List[str]:
         try:
             _posters = self._get_json_data().get('images', {}).get('posters', [])
-            return [ "http://image.tmdb.org/t/p/w500" + img['file_path'] for img in _posters ]
+            return [ "https://image.tmdb.org/t/p/w500" + img['file_path'] for img in _posters ]
         except BaseException:
             return []
 
@@ -509,7 +509,7 @@ class TMDB_API(object):
     @staticmethod
     def url_imdb_id(idmb_id):
 
-        url = "http://%s/3/find/%s?api_key=%s&language=%s&external_source=imdb_id" % (
+        url = "https://%s/3/find/%s?api_key=%s&language=%s&external_source=imdb_id" % (
             TMDB_API.tmdb_api_key["host"],
             idmb_id,
             TMDB_API.tmdb_api_key["key"],
@@ -521,7 +521,7 @@ class TMDB_API(object):
             try:
                 id = tmdb_data["%s_results" % type][0]["id"]
                 return (
-                    "http://%s/3/" % TMDB_API.tmdb_api_key["host"]
+                    "https://%s/3/" % TMDB_API.tmdb_api_key["host"]
                     + type
                     + "/"
                     + str(id)
@@ -544,7 +544,7 @@ class TMDB_API(object):
             query = quote(title.encode("utf-8"))
             api_key=TMDB_API.tmdb_api_key["key"]
             lang = TMDB_API.get_lang()
-            url = f"http://{host}/3/search/{media_type}?query={query}&api_key={api_key}&language={lang}"
+            url = f"https://{host}/3/search/{media_type}?query={query}&api_key={api_key}&language={lang}"
             for k, v in kwargs.items():
                 if k == 'include_image_language':
                     continue
@@ -604,7 +604,7 @@ class TMDB_API(object):
             api_key = TMDB_API.tmdb_api_key["key"]
             lang = TMDB_API.get_lang()
             host = TMDB_API.tmdb_api_key["host"]
-            return f"http://{host}/3/{type}/{id}?api_key={api_key}&language={lang}&append_to_response={append_to_response}"
+            return f"https://{host}/3/{type}/{id}?api_key={api_key}&language={lang}&append_to_response={append_to_response}"
 
         for data in all_data:
             for tag in ["results", "movie_results", "tv_results"]:
@@ -626,7 +626,7 @@ class TMDB_API(object):
     @staticmethod
     def tmdb_by_imdb(imdb, type):
         url = (
-            "http://%s/3/find/" % TMDB_API.tmdb_api_key["host"]
+            "https://%s/3/find/" % TMDB_API.tmdb_api_key["host"]
             + imdb
             + "?external_source=imdb_id&api_key="
             + TMDB_API.tmdb_api_key["key"]
@@ -639,7 +639,7 @@ class TMDB_API(object):
     @staticmethod
     def popular(page=1):
         url = (
-            "http://%s/3/movie/popular?api_key=" % TMDB_API.tmdb_api_key["host"]
+            "https://%s/3/movie/popular?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
             + "&language=" + TMDB_API.get_lang()
         )
@@ -649,7 +649,7 @@ class TMDB_API(object):
     @staticmethod
     def popular_by_genre(genre, page=1):
         url = (
-            "http://%s/3/discover/movie?api_key=" % TMDB_API.tmdb_api_key["host"]
+            "https://%s/3/discover/movie?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
             + "&language=" + TMDB_API.get_lang()
         )
@@ -663,7 +663,7 @@ class TMDB_API(object):
     @staticmethod
     def popular_tv(page=1):
         url = (
-            "http://%s/3/tv/popular?api_key=" % TMDB_API.tmdb_api_key["host"]
+            "https://%s/3/tv/popular?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
             + "&language=" + TMDB_API.get_lang()
         )
@@ -673,7 +673,7 @@ class TMDB_API(object):
     @staticmethod
     def top_rated(page=1):
         url = (
-            "http://%s/3/movie/top_rated?api_key=" % TMDB_API.tmdb_api_key["host"]
+            "https://%s/3/movie/top_rated?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
             + "&language=" + TMDB_API.get_lang()
         )
@@ -683,7 +683,7 @@ class TMDB_API(object):
     @staticmethod
     def top_rated_tv(page=1):
         url = (
-            "http://%s/3/tv/top_rated?api_key=" % TMDB_API.tmdb_api_key["host"]
+            "https://%s/3/tv/top_rated?api_key=" % TMDB_API.tmdb_api_key["host"]
             + TMDB_API.tmdb_api_key["key"]
             + "&language=" + TMDB_API.get_lang()
         )
@@ -693,7 +693,7 @@ class TMDB_API(object):
     @staticmethod
     def show_similar_t(page, tmdb_id, type):
         url = (
-            "http://%s/3/" % TMDB_API.tmdb_api_key["host"]
+            "https://%s/3/" % TMDB_API.tmdb_api_key["host"]
             + type
             + "/"
             + str(tmdb_id)
@@ -735,7 +735,7 @@ class TMDB_API(object):
     def genres_list():
         # &language=ru
         _ = TMDB_API.tmdb_api_key
-        url = "http://{}/3/genre/movie/list?api_key={}".format(_["host"], _["key"])
+        url = "https://{}/3/genre/movie/list?api_key={}".format(_["host"], _["key"])
 
         en = requests.get(url + "&language=en").json()["genres"]
         ru = requests.get(url + "&language=ru").json()["genres"]
@@ -754,7 +754,7 @@ class TMDB_API(object):
         if imdb_id:
             url_ = TMDB_API.url_imdb_id(imdb_id)
         elif tmdb_id and type:
-            url_ = "http://%s/3/" % TMDB_API.tmdb_api_key["host"] \
+            url_ = "https://%s/3/" % TMDB_API.tmdb_api_key["host"] \
                     + type  \
                     + "/" \
                     + str(tmdb_id) \
@@ -808,10 +808,10 @@ class TMDB_API(object):
             raise AttributeError
 
     def poster(self):
-        return "http://image.tmdb.org/t/p/original" + self.tmdb_data["poster_path"]
+        return "https://image.tmdb.org/t/p/original" + self.tmdb_data["poster_path"]
 
     def fanart(self):
-        return "http://image.tmdb.org/t/p/original" + self.tmdb_data["backdrop_path"]
+        return "https://image.tmdb.org/t/p/original" + self.tmdb_data["backdrop_path"]
 
     def set(self):
         try:
@@ -845,7 +845,7 @@ class TMDB_API(object):
             res["en_name"] = actor["name"]
             if actor.get("profile_path"):
                 res["photo"] = (
-                    "http://image.tmdb.org/t/p/original" + actor["profile_path"]
+                    "https://image.tmdb.org/t/p/original" + actor["profile_path"]
                 )
             if actor.get("character"):
                 res["role"] = actor["character"]

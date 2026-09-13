@@ -1,0 +1,7 @@
+# Kodi Media Center language file
+# Addon Name: VDLib
+# Addon id: script.module.vd-common
+# Addon Provider: -=Vd=-
+#
+msgid ""
+msgstr ""

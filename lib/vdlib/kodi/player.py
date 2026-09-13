@@ -1,11 +1,20 @@
 # coding: utf-8
 
+from typing import Optional
+
 from ..util.string import decode_string
 from ..torrent import torrent2httpplayer, torrserverplayer
 # from ..torrent import aceplayer, yatpplayer,
-import time, sys
-import xbmc, xbmcgui, xbmcplugin
+import os, sys, time
+import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 from ..util.log import debug
+from .compat import translatePath
+
+from torrserve_stream.engine import Engine
+from torrserve_stream.settings import Settings
+
+vdlib_addon = xbmcaddon.Addon(id='script.module.vd-common')
+locString = vdlib_addon.getLocalizedString
 
 class OurDialogProgress(xbmcgui.DialogProgress):
     def create(self, heading, line1="", line2="", line3=""):
@@ -129,3 +138,58 @@ def play_torrent(path, settings, info_dialog, title_dialog, video_info=None, art
         if player:
             player.close()
     #return url
+
+
+class xPlayer(xbmc.Player):
+
+    def __init__(self, hash=None, index=None):
+        self.index = index
+        self.paused = False
+        self._engine: Optional[Engine] = None
+        xbmc.Player.__init__(self)
+        self.init_engine(hash, index)
+
+    def init_engine(self, hash: Optional[str], index: Optional[int]):
+        if not self._engine:
+            s = Settings()
+            self._engine = Engine(**s.engine_args)
+        self._engine.hash = hash
+        self.index = index
+
+    @property
+    def engine(self):
+        if self._engine:
+            return self._engine
+
+        s = Settings()
+        self._engine = Engine(**s.engine_args)
+        return self._engine
+
+    def onStarted(self, file: str):
+        from ..util.log import debug as _debug
+        _debug('xPlayer.onStarted file={}'.format(file))
+        try:
+            hash = Engine.extract_hash_from_play_url(file)
+            index = Engine.extract_index_from_play_url(file)
+            if index is not None:
+                index -= 1
+            _debug('xPlayer.onStarted hash={} index={}'.format(hash, index))
+            self.init_engine(hash, index)
+        except Exception as e:
+            import traceback
+            _debug('xPlayer.onStarted error: {} {}'.format(type(e).__name__, str(e)))
+            _debug('xPlayer.onStarted traceback: {}'.format(traceback.format_exc()))
+
+    def onPlayBackStarted(self):
+        file = self.getPlayingFile()
+        if file:
+            self.onStarted(file)
+
+    def onPlayBackPaused(self):
+        pass
+
+    def onPlayBackResumed(self):
+        self.paused = False
+
+    def onPlayBackStopped(self):
+        self.paused = False

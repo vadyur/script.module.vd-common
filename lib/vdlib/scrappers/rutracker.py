@@ -229,6 +229,8 @@ class RuTrackerBase(object):
             return c
 
     def get_request(self, url, data=None, headers=None, cookies=None):
+        if self._fs_url and not self._fs_state:
+            self._load_flaresolverr_state()
         if self._fs_url and self._fs_state:
             client = self._get_fs_client()
             if client:
@@ -241,6 +243,8 @@ class RuTrackerBase(object):
         return self.session.get(url, data=data, headers=headers, cookies=cookies)
 
     def post_request(self, url, data=None, headers=None, cookies=None):
+        if self._fs_url and not self._fs_state:
+            self._load_flaresolverr_state()
         if self._fs_url and self._fs_state:
             client = self._get_fs_client()
             if client:

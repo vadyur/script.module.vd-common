@@ -262,7 +262,7 @@ class RuTrackerBase(object):
         )
         headers = {'Referer': url}
 
-        data = { 'max': '1', 'nm': title.encode('cp1251') }
+        data = { 'max': '1', 'nm': title }
 
         r = self.post_request(url, headers=headers, data=data)
         if r.ok:

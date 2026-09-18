@@ -240,7 +240,16 @@ class RuTrackerBase(object):
                 if body is not None:
                     return _FakeResponse(body)
             return _FakeResponse('', 503)
-        return self.session.get(url, data=data, headers=headers, cookies=cookies)
+        r = self.session.get(url, data=data, headers=headers, cookies=cookies)
+        if self._fs_url and self._fs_state:
+            client = self._get_fs_client()
+            if client:
+                body = client.request('GET', url, params=data,
+                                      cookies=self._fs_state['cookies'],
+                                      useragent=self._fs_state['useragent'])
+                if body is not None:
+                    return _FakeResponse(body)
+        return r
 
     def post_request(self, url, data=None, headers=None, cookies=None):
         if self._fs_url and not self._fs_state:
@@ -254,7 +263,16 @@ class RuTrackerBase(object):
                 if body is not None:
                     return _FakeResponse(body)
             return _FakeResponse('', 503)
-        return self.session.post(url, data=data, headers=headers, cookies=cookies)
+        r = self.session.post(url, data=data, headers=headers, cookies=cookies)
+        if self._fs_url and self._fs_state:
+            client = self._get_fs_client()
+            if client:
+                body = client.request('POST', url, params=data,
+                                      cookies=self._fs_state['cookies'],
+                                      useragent=self._fs_state['useragent'])
+                if body is not None:
+                    return _FakeResponse(body)
+        return r
 
     def search(self, title):
         if not self.check_settings():
@@ -278,19 +296,32 @@ class RuTrackerBase(object):
                     continue
 
                 indx = title.find('[')
+                if indx < 0:
+                    continue
                 info = title[indx:].strip('[]')
                 title = title[:indx].strip()
-                seeds = tr.find('b', class_='seedmed').get_text()
+
+                seed_el = tr.find('b', class_='seedmed')
+                if not seed_el:
+                    seed_el = tr.find('span', class_='seedmed')
+                if not seed_el:
+                    continue
+                seeds = seed_el.get_text()
                 if seeds == '0':
                     continue
 
+                leech_el = tr.find('td', class_='leechmed')
+                leechers = leech_el.get_text() if leech_el else '0'
+
                 td_dl = tr.find('td', class_='tor-size')
+                if not td_dl or not td_dl.a:
+                    continue
                 dl_link = td_dl.a['href']
 
                 yield {
                     'title': title,	'info': info,
                     'seeds': seeds,
-                    'leechers': tr.find('td', class_='leechmed').get_text(),
+                    'leechers': leechers,
                     'size': td_dl.get_text().strip(u'\n ↓'),
                     'dl_link': 'https://%s/forum/' % self.baseurl + dl_link
                 }        

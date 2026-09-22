@@ -11,9 +11,9 @@ def get_sort_index(play_url: str) -> Optional[int]:
     from torrserve_stream import Settings
     ts_settings = Settings()
 
-    idx = Engine.extract_index_from_play_url(play_url)
+    idx = Engine.extract_file_index_from_play_url(play_url)
     if idx is not None:
-        return idx - 1  # play url index is 1-based
+        return idx
 
     hash = Engine.extract_hash_from_play_url(play_url)
     name = Engine.extract_filename_from_play_url(play_url)

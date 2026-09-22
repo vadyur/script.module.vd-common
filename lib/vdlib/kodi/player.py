@@ -172,7 +172,7 @@ class xPlayer(xbmc.Player):
             hash = Engine.extract_hash_from_play_url(file)
             index = Engine.extract_index_from_play_url(file)
             if index is not None:
-                index -= 1
+                index -= 1  # play url index is 1-based
             _debug('xPlayer.onStarted hash={} index={}'.format(hash, index))
             self.init_engine(hash, index)
         except Exception as e:

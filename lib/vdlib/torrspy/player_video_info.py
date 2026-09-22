@@ -6,13 +6,14 @@ from typing import Optional, Dict, Any
 import xbmc
 
 def get_sort_index(play_url: str) -> Optional[int]:
+    ''' returns 0-based file index for a TorrServer play url '''
     from torrserve_stream import Engine
     from torrserve_stream import Settings
     ts_settings = Settings()
 
     idx = Engine.extract_index_from_play_url(play_url)
     if idx is not None:
-        return idx
+        return idx - 1  # play url index is 1-based
 
     hash = Engine.extract_hash_from_play_url(play_url)
     name = Engine.extract_filename_from_play_url(play_url)
@@ -29,7 +30,7 @@ class PlayerVideoInfo(object):
         self.video_info: Optional[Dict[str, Any]] = None
         self.media_type: Optional[str] = None
         self.play_url: Optional[str] = None
-        self.sort_index: Optional[int] = None
+        self.sort_index: Optional[int] = None    # 0-based file index
 
     def update(self) -> None:
         if self.player and self.player.isPlayingVideo():

@@ -39,6 +39,7 @@ def save_movie(player_video_info):
             update_library(make_path_to_base_relative('Movies'), on_update_library)
 
 def save_movie_strm(play_url: str, sort_index: int, original_title: str, year: int):
+    ''' sort_index: 0-based file index '''
     from vdlib.util.string import decode_string
     name = u'{} ({})'.format(
                 decode_string(original_title),
@@ -91,6 +92,7 @@ def update_library(path=None, on_update=None):
             break
 
 def save_strm(file_path, play_url, sort_index):
+    # sort_index: 0-based file index
     # action="play_now", magnet=magneturi, selFile=0
     from vdlib.util import urlencode
 
@@ -209,7 +211,7 @@ def save_tvshow_strms(title, original_title, year, imdb, ts_engine, episode_func
         if not filesystem.exists(season_path):
             filesystem.makedirs(season_path)
         filename = get_tvshow_filename(original_title, year, item['season'], item['episode'])
-        sort_index = item['index']
+        sort_index = item['index']  # 0-based
         play_url = ts_engine.play_url(sort_index, torrent_stat=ts_stat)
         strm_path = filesystem.join(season_path, filename)
         save_strm(strm_path, play_url, sort_index)

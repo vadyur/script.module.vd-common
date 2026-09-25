@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os, sys
-from typing import Optional
+from typing import List, Optional
 
 from ..util.log import debug, print_tb
 from ..util import filesystem
@@ -118,11 +118,9 @@ class TorrentPlayer(object):
 			else:
 				return info[_('name')]
 
-		def f_path(f):
-			if _('path.utf-8') in f:
-				return f['path.utf-8']
-			else:
-				return f['path']
+		def f_path(f) -> List[str]:
+			parts = f[_('path.utf-8')] if _('path.utf-8') in f else f[_('path')]
+			return [TorrentPlayer.Name(p) for p in parts]
 
 		name = '.'
 		playable_items = []
@@ -138,11 +136,13 @@ class TorrentPlayer(object):
 						playable_items.append({'index': i, 'name': TorrentPlayer.Name(name), 'size': size})
 					name = TorrentPlayer.Name(info_name())
 			else:
-				playable_items = [ {'index': 0, 'name': TorrentPlayer.Name(info_name()), 'size': info[_('length')] } ]
+				name = TorrentPlayer.Name(info_name())
+				playable_items = [ {'index': 0, 'name': name, 'size': info[_('length')] } ]
 		except UnicodeDecodeError:
 			return None
 
-		return { 'info_hash': self.info_hash, 'announce': decoded[_('announce')], 'files': playable_items, 'name': name }
+		announce = decoded.get(_('announce'))
+		return { 'info_hash': self.info_hash, 'announce': TorrentPlayer.Name(announce) if announce else None, 'files': playable_items, 'name': name }
 
 	def GetTorrentInfo(self):
 		try:

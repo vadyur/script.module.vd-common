@@ -725,7 +725,7 @@ class TMDB_API(object):
                     return res.imdb()
 
         except BaseException as e:
-            from log import print_tb
+            from ..util.log import print_tb
 
             print_tb(e)
 
@@ -907,7 +907,7 @@ class MovieAPI(object):
                 _year = year
 
             except BaseException as e:
-                from log import print_tb
+                from ..util.log import print_tb
 
                 print_tb(e)
 

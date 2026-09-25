@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-import os, sys
+import io, os, sys
 
 from .string import decode_string
 from . import log
@@ -214,7 +214,50 @@ def normpath(path):
 	return ensure_unicode(os.path.normpath(get_path(path)), get_filesystem_encoding())
 
 
+def _xbmcvfs_binary_fopen(path: str, mode: str) -> io.BytesIO:
+	"""Бинарный файл через xbmcvfs: File.read() в Kodi 19+ отдаёт str, поэтому читаем readBytes()."""
+	class BinaryFile(io.BytesIO):
+		def __init__(self, filename: str, opt: str) -> None:
+			self.opt = opt
+			self.filename = xbmcvfs_path(filename)
+			buf = b''
+			if 'r' in opt or 'a' in opt:
+				exst = exists(filename)
+				if not exst and 'r' in opt:
+					from errno import ENOENT
+					raise IOError(ENOENT, 'Not a file', filename)
+				if exst:
+					f = xbmcvfs.File(self.filename)
+					buf = bytes(f.readBytes())
+					f.close()
+
+			io.BytesIO.__init__(self, buf)
+			if 'a' in opt:
+				self.seek(0, 2)
+
+		def __enter__(self):
+			return self
+
+		def __exit__(self, exc_type, exc_val, exc_tb):
+			self.close()
+
+		def close(self) -> None:
+			if ('w' in self.opt or 'a' in self.opt or '+' in self.opt) and not self.closed:
+				f = xbmcvfs.File(self.filename, 'w')
+				f.write(bytearray(self.getvalue()))
+				f.close()
+			io.BytesIO.close(self)
+
+		def size(self) -> int:
+			return len(self.getvalue())
+
+	return BinaryFile(path, mode)
+
+
 def fopen(path, mode):
+	if use_xbmcvfs and 'b' in mode and sys.version_info >= (3, 0):
+		return _xbmcvfs_binary_fopen(path, mode)
+
 	if use_xbmcvfs:
 		try:
 			from StringIO import StringIO	# type: ignore

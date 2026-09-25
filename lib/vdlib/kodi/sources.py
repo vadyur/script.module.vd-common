@@ -184,7 +184,7 @@ class Sources(object):
 				for s in t.findall('source'):
 					def elem(sId: str) -> str:
 						t = s.find(sId)
-						return t.text if t else ''	# type: ignore
+						return (t.text or '') if t is not None else ''
 
 					label = elem('name')
 					if normalize:

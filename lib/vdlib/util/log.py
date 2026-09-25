@@ -86,7 +86,7 @@ class dump_context:
 
 		name = self.module + self.timestamp() + '.log'
 		try:
-			from xbmc import translatePath
+			from ..kodi.compat import translatePath
 			path = translatePath('special://logpath/MA_logs/')
 			if not filesystem.exists(path):
 				filesystem.makedirs(path)

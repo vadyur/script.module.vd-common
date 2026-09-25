@@ -329,9 +329,16 @@ def fopen(path, mode):
 			else:
 				return File(path, mode)
 		except UnicodeDecodeError:
-			return open(real_path(path), mode)
+			return _open(path, mode)
 	else:
-		return open(real_path(path), mode)
+		return _open(path, mode)
+
+
+def _open(path, mode):
+	# текст - всегда utf-8 (как xbmcvfs), а не кодировка системы (cp1251 на русской Windows)
+	if 'b' not in mode and sys.version_info >= (3, 0):
+		return open(real_path(path), mode, encoding='utf-8')
+	return open(real_path(path), mode)
 
 
 def join(path, *paths):

@@ -364,6 +364,29 @@ def detect_tvshow(title: str) -> Optional[bool]:
     pass
 
 
+def _is_placeholder_episode_title(title: str) -> bool:
+    ''' TMDB без перевода подставляет "Эпизод 3" / "Серия 3" / "Episode 3" '''
+    return re.match(r'^\s*(Эпизод|Серия|Episode)\s*\d+\s*$', title or '', re.IGNORECASE) is not None
+
+
+def _tmdb_episode_en(tmdb_id, season_number: int, episode_number: int) -> dict:
+    ''' Серия на английском (одним запросом сезона); {} если не удалось '''
+    import json
+    from ..util import urlopen
+    from ..util.log import debug
+
+    api_key = TMDB_API.tmdb_api_key
+    url = 'https://{}/3/tv/{}/season/{}?api_key={}&language=en-US'.format(
+        api_key['host'], tmdb_id, season_number, api_key['key'])
+    try:
+        for episode in json.load(urlopen(url)).get('episodes', []):
+            if episode.get('episode_number') == episode_number:
+                return episode
+    except Exception as e:
+        debug('TMDB en episode request failed: {}'.format(e))
+    return {}
+
+
 def update_video_info_episode_from_tmdb(video_info: VideoInfo, tmdb_id, url):
     if video_info.get("mediatype") != "tvshow" or not url:
         return
@@ -388,14 +411,25 @@ def update_video_info_episode_from_tmdb(video_info: VideoInfo, tmdb_id, url):
         season_info = api.season(season_number)
         for episode_info in episodes:
             if episode_info.get('episode_number') == episode_number:
+                show_plot: str = (video_info.get('plot') or '').strip()
+                season_overview: str = (season_info.get('overview') or '').strip() if episode_number == 1 and season_info else ''
+                episode_title: str = episode_info.get('name') or ''
+                episode_overview: str = (episode_info.get('overview') or '').strip()
+
                 video_info['tvshowtitle'] = video_info.get('title', '')
-                video_info['title'] = episode_info['name']
-                parts = []
-                if episode_number == 1 and season_info:
-                    parts.append((season_info.get('overview') or '').strip())
-                parts.append((episode_info.get('overview') or '').strip())
-                plot = '\n\n'.join(p for p in parts if p)
-                # у многих серий нет описания на языке запроса - тогда остаётся описание сериала
+
+                if episode_overview:
+                    plot = '\n\n'.join(p for p in [season_overview, episode_overview] if p)
+                else:
+                    # на языке запроса у серии нет описания (или вместо названия заглушка "Эпизод N") -
+                    # берём английскую версию и добавляем её к описанию сериала
+                    en_episode = _tmdb_episode_en(tmdb_id, season_number, episode_number)
+                    if _is_placeholder_episode_title(episode_title) and en_episode.get('name'):
+                        episode_title = en_episode['name']
+                    plot = '\n\n'.join(p for p in [show_plot, season_overview,
+                                                   (en_episode.get('overview') or '').strip()] if p)
+
+                video_info['title'] = episode_title
                 if plot:
                     video_info['plot'] = plot
 

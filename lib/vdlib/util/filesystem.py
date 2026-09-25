@@ -296,7 +296,7 @@ def fopen(path, mode):
 				StringIO.__init__(self, buf)
 
 				if 'a' in opt:
-					self.seek(0, mode=2)
+					self.seek(0, 2)	# io.StringIO.seek() в Python 3 не принимает именованных аргументов
 
 			def write(self, s):
 				if not s: return

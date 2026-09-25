@@ -809,10 +809,11 @@ class TMDB_API(object):
         raise AttributeError
 
     def year(self):
-        try:
-            return self.tmdb_data["release_date"].split("-")[0]
-        except:
+        # у фильмов release_date, у сериалов first_air_date
+        date = self.tmdb_data.get("release_date") or self.tmdb_data.get("first_air_date")
+        if not date:
             raise AttributeError
+        return date.split("-")[0]
 
     def poster(self):
         return "https://image.tmdb.org/t/p/original" + self.tmdb_data["poster_path"]

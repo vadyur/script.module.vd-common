@@ -538,7 +538,9 @@ class TMDB_API(object):
         return None
 
     @staticmethod
-    def search(title:str, append_to_response:Optional[str]=None, type:Optional[str]=None,  **kwargs) -> tmdb_query_result:
+    def search(title:str, append_to_response:Optional[str]=None, type:Optional[str]=None, year:Optional[int]=None, **kwargs) -> tmdb_query_result:
+        ''' year: сужает поиск (movie - year, tv - first_air_date_year); без него TMDB отдаёт
+            все совпадения по названию, и tmdb_query выкачивает десятки страниц '''
         from ..util import quote
 
         def make_url(media_type):
@@ -547,6 +549,8 @@ class TMDB_API(object):
             api_key=TMDB_API.tmdb_api_key["key"]
             lang = TMDB_API.get_lang()
             url = f"https://{host}/3/search/{media_type}?query={query}&api_key={api_key}&language={lang}"
+            if year:
+                url += "&{}={}".format('first_air_date_year' if media_type == 'tv' else 'year', year)
             for k, v in kwargs.items():
                 if k == 'include_image_language':
                     continue

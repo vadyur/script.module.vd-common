@@ -232,7 +232,12 @@ def find_tmdb_movie_item(video_info: VideoInfo, art: Art={}, isTVshow:Optional[b
         image_langs = 'null,en,ru,ro,uk,de,fr,es,it,pt,pl,tr,ja,ko,zh,hu,cs,sk'
         type = 'tv' if isTVshow else None
 
-        results = TMDB_API.search(title, type=type, append_to_response='images,external_ids,credits', include_image_language=image_langs)
+        search_args = dict(type=type, append_to_response='images,external_ids,credits', include_image_language=image_langs)
+        year = video_info.get('year')
+        results = TMDB_API.search(title, year=year, **search_args) if year else None
+        if not results:
+            # без года (или год у TMDB другой) - полный поиск по названию
+            results = TMDB_API.search(title, **search_args)
         if len(results) == 1:
             return results[0] # type: ignore
 

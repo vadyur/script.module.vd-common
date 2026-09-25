@@ -406,11 +406,13 @@ class ImdbAPI(object):
         return jsn.get('datePublished', '')[:4] if jsn else ''
 
     def rating(self):
-        jsn = self.json
-        return str(jsn['aggregateRating']['ratingValue']) if jsn else 0
+        try:
+            return str(self.json['aggregateRating']['ratingValue'])
+        except (KeyError, TypeError):
+            return 0
 
-    def runtime(self):
-        duration = self.json['duration']
+    def runtime(self) -> str:
+        duration = self.json.get('duration', '')
         duration = duration.replace('PT', '').replace('H', 'h ').replace('M', 'm')
         return duration
 
@@ -418,13 +420,11 @@ class ImdbAPI(object):
         result = self.json.get('contentRating', '')
         return result
 
-    def title(self):
-        result = self.json['alternateName']
-        return result
+    def title(self) -> Optional[str]:
+        return self.json.get('alternateName') or self.json.get('name')
 
-    def originaltitle(self):
-        result = self.json['name']
-        return result
+    def originaltitle(self) -> Optional[str]:
+        return self.json.get('name')
 
     def type(self):
         a = self.page.find("a", href=re.compile(r"/title/tt\d+/episodes")) if self.page else None
@@ -473,6 +473,7 @@ def get_tmdb_lang():
 class tmdb_query_result(object):
     def __init__(self) -> None:
         self.result: List[tmdb_movie_item] = []
+        self.total_pages: int = 0
 
     def append(self, item: tmdb_movie_item) -> None:
         self.result.append(item)
@@ -484,6 +485,7 @@ class tmdb_query_result(object):
     def __add__(self, other: 'tmdb_query_result') -> 'tmdb_query_result':
         r = tmdb_query_result()
         r.result = self.result + other.result
+        r.total_pages = max(self.total_pages, other.total_pages)
         return r
 
     def __len__(self) -> int:
@@ -579,6 +581,8 @@ class TMDB_API(object):
         all_data = []
         pages_count = 1
         page = 1
+        # страница указана явно (popular, top_rated, similar ...) - остальные не выкачиваем
+        explicit_page = re.search(r'[?&]page=\d+', url) is not None
 
         while page <= pages_count:
             page_url = url
@@ -590,7 +594,10 @@ class TMDB_API(object):
                 data = json.load(urlopen(page_url))
                 debug("data is: {}".format(data))
                 all_data.append(data)
-                pages_count = data.get("total_pages", 1)
+                if not result.total_pages:
+                    result.total_pages = data.get("total_pages", 1)
+                if not explicit_page:
+                    pages_count = data.get("total_pages", 1)
 
             except (HTTPError, URLError) as e:
                 debug("Error TMDB request")

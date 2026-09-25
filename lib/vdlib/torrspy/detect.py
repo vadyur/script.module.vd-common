@@ -390,12 +390,14 @@ def update_video_info_episode_from_tmdb(video_info: VideoInfo, tmdb_id, url):
             if episode_info.get('episode_number') == episode_number:
                 video_info['tvshowtitle'] = video_info.get('title', '')
                 video_info['title'] = episode_info['name']
-                episode_overview: str = episode_info['overview']
+                parts = []
                 if episode_number == 1 and season_info:
-                    season_overview: str = season_info.get('overview', '')
-                    video_info['plot'] = '\n\n'.join([season_overview, episode_overview]).strip('\n')
-                else:
-                    video_info['plot'] = episode_overview
+                    parts.append((season_info.get('overview') or '').strip())
+                parts.append((episode_info.get('overview') or '').strip())
+                plot = '\n\n'.join(p for p in parts if p)
+                # у многих серий нет описания на языке запроса - тогда остаётся описание сериала
+                if plot:
+                    video_info['plot'] = plot
 
                 video_info["episode"] = episode_number
                 video_info["season"] = season_number

@@ -146,6 +146,8 @@ class RuTrackerBase(object):
 
     def _login_via_flaresolverr(self):
         debug('RuTrackerBase: login via FlareSolverr for %s' % self.baseurl)
+        import time as time_mod
+        from urllib.parse import urlencode
         from vdlib.scrappers.flaresolverr import FlareSolverrState
         client = self._get_fs_client()
         if client is None:
@@ -159,40 +161,75 @@ class RuTrackerBase(object):
             'login': '\u0432\u0445\u043e\u0434',
             'redirect': 'index.php'
         }
+        # Byparr умеет только GET (cmd=request.post он игнорирует, "purely
+        # for compatibility with FlareSolverr"): браузерный GET снимает
+        # cf_clearance, сам логин шлём обычным POST с этими куками (ниже) -
+        # cf_clearance пропускает Cloudflare, а сессия requests подхватывает
+        # bb_session с редиректа на index.php.
         solution = client.api({
-            'cmd': 'request.post',
+            'cmd': 'request.get',
             'url': 'https://%s/forum/login.php' % self.baseurl,
-            'postData': '&'.join('%s=%s' % (k, v) for k, v in params.items()),
             'disableMedia': True,
+            'blockMedia': True,
         })
         if solution is None:
-            debug('RuTrackerBase: FlareSolverr login failed')
+            debug('RuTrackerBase: FlareSolverr login GET failed')
+            return False
+        if not solution.get('cookies'):
+            debug('RuTrackerBase: no cookies from FlareSolverr GET')
             return False
 
-        body = solution.get('response', '')
         cookies = solution.get('cookies', [])
         useragent = solution.get('userAgent', '') or solution.get('useragent', '')
 
-        if re.search(r'login_username', body):
-            debug('RuTrackerBase: FlareSolverr login form still present after POST')
+        data = urlencode(params, encoding='windows-1251').encode('ascii')
+        s = requests.Session()
+        for c in cookies:
+            try:
+                s.cookies.set(c['name'], c['value'],
+                              domain=(c.get('domain') or '').lstrip('.') or self.baseurl,
+                              path=c.get('path') or '/')
+            except Exception as e:
+                debug('RuTrackerBase: cookie seed failed: %s' % e)
+        if useragent:
+            s.headers['User-Agent'] = useragent
+
+        try:
+            r = s.post('https://%s/forum/login.php' % self.baseurl, data=data,
+                       headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                       timeout=30)
+            body = r.content.decode('windows-1251', 'replace')
+        except Exception as e:
+            debug('RuTrackerBase: direct login POST failed: %s' % e)
             return False
 
-        if cookies:
-            FlareSolverrState.save(self.baseurl, self.username or '',
-                                    cookies=cookies, useragent=useragent,
-                                    latency=client._latency)
-            self._fs_state = {'cookies': cookies, 'useragent': useragent,
-                              'latency': client._latency, 'domain': self.baseurl}
-            for c in cookies:
-                self._session.cookies.set(c['name'], c['value'],
-                                          domain=c.get('domain', ''), path=c.get('path', '/'))
+        if re.search(r'login_username', body):
+            debug('RuTrackerBase: login form still present after POST')
+            return False
+
+        now = time_mod.time()
+        final = [{'name': c.name, 'value': c.value, 'domain': c.domain,
+                  'path': c.path, 'secure': bool(c.secure)}
+                 for c in s.cookies if c.expires is None or c.expires > now]
+        state_cookies = final or cookies
+        FlareSolverrState.save(self.baseurl, self.username or '',
+                               cookies=state_cookies, useragent=useragent,
+                               latency=client._latency)
+        self._fs_state = {'cookies': state_cookies, 'useragent': useragent,
+                          'latency': client._latency, 'domain': self.baseurl}
+        if self._session is not None:
+            for c in state_cookies:
+                try:
+                    self._session.cookies.set(
+                        c['name'], c['value'],
+                        domain=(c.get('domain') or '').lstrip('.') or self.baseurl,
+                        path=c.get('path') or '/')
+                except Exception:
+                    pass
             if useragent:
                 self._session.headers['User-Agent'] = useragent
-            debug('RuTrackerBase: FlareSolverr login OK, %d cookies saved' % len(cookies))
-            return True
-
-        debug('RuTrackerBase: FlareSolverr login - no cookies in response')
-        return False
+        debug('RuTrackerBase: FlareSolverr login OK, %d cookies saved' % len(state_cookies))
+        return True
 
     def login(self, session):
         if self._fs_url:

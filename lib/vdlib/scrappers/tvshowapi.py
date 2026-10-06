@@ -503,6 +503,20 @@ class MyShowsAPI(object):
 						res[self.dictMyShows[tag]] = ep[tag]
 		return res
 
+	def get_imdb_id(self):
+		if self.valid_ep():
+			imdb_id = self.data().get('imdbId')
+			if imdb_id:
+				return str(imdb_id)
+
+		if self.valid():
+			for section in self.myshows.values():
+				imdb_id = section.get('imdbId')
+				if imdb_id:
+					return str(imdb_id)
+
+		return None
+
 	def getYear(self):
 		if self.data():
 			return self.data().get('year')
@@ -589,6 +603,9 @@ class TVShowAPI(TheTVDBAPI, MyShowsAPI):
 			res['plot'] = stripHtml(res['plot'])
 
 		return res
+
+	def ImdbId(self):
+		return MyShowsAPI.get_imdb_id(self)
 
 	def Year(self):
 		res = MyShowsAPI.getYear(self)

@@ -1,5 +1,4 @@
-﻿import base64
-from typing import List, Tuple
+﻿from typing import List, Tuple
 import requests
 from ..util import log, filesystem
 
@@ -67,9 +66,9 @@ DB_VERSIONS = {
 	'19': '119',
 	'20': '121',
 	'21': '131',
-	#'22': '135'
-	# https://raw.githubusercontent.com/xbmc/xbmc/master/xbmc/video/VideoDatabase.cpp
- 	# CVideoDatabase::GetSchemaVersion()
+	#'22': '149'
+	# https://raw.githubusercontent.com/xbmc/xbmc/master/xbmc/video/VideoDatabaseMigration.cpp
+  	# CVideoDatabase::GetSchemaVersion()
 }
 
 BASE_PATH = 'special://database'
@@ -92,25 +91,28 @@ class VideoDatabase(object):
 
 	@staticmethod
 	def find_db_version_by_git(commit: str) -> int:
-		url = f'https://api.github.com/repos/xbmc/xbmc/contents/xbmc/video/VideoDatabase.cpp?ref={commit}'
-		response = requests.get(url)
-		if response.status_code != 200:
-			return 0
-		json_response = response.json()
-		content = base64.b64decode(json_response['content']).decode('utf-8')
+		import re
 
-		find = False
-		for line in content.split('\n'):
-			if 'CVideoDatabase::GetSchemaVersion()' in line:
-				find = True
-				continue
-			if find:
-				if 'return' in line:
-					try:
-						return int(line.split('return ')[1].split(';')[0])
-					except (IndexError, ValueError) as e:
-						log.debug(f"Error parsing schema version from line: {line} - {e}", log.lineno())
-						return 0
+		if not commit:
+			return 0
+
+		pattern = re.compile(
+			r'int\s+CVideoDatabase::GetSchemaVersion\(\)\s*const\s*\{[^{}]*?return\s+([0-9]+)\s*;',
+			re.S)
+
+		for path in ('xbmc/video/VideoDatabaseMigration.cpp', 'xbmc/video/VideoDatabase.cpp'):
+			url = f'https://raw.githubusercontent.com/xbmc/xbmc/{commit}/{path}'
+			try:
+				response = requests.get(url, timeout=10)
+				if response.status_code != 200:
+					continue
+
+				match = pattern.search(response.text)
+				if match:
+					return int(match.group(1))
+			except BaseException as e:
+				log.debug(f'Error finding DB version from {url}: {e}', log.lineno())
+
 		return 0
 
 	@staticmethod

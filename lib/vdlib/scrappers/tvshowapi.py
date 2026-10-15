@@ -8,6 +8,8 @@ import xml.etree.ElementTree as ET
 
 from ..util import urlopen, HTTPError
 
+import requests
+
 import io
 
 from ..util.string import decode_string
@@ -304,14 +306,19 @@ class TheTVDBAPI(object):
 				self.thetvdbid = re.search(r'<id>(\d+)</id>', xml_data).group(1)
 			except AttributeError:
 				return
-		except HTTPError as e:
+		except Exception as e:
 			debug('TheTVDBAPI: ' + str(e))
 			return
 
 		url2 = self.__base_url + self.__apikey + '/series/%s/all/%s.zip' % (self.thetvdbid, self.__lang)
 		debug(url2)
 
-		response2 = urlopen(url2)
+		try:
+			response2 = urlopen(url2)
+		except Exception as e:
+			debug('TheTVDBAPI: ' + str(e))
+			return
+
 		try:
 			f = io.BytesIO(response2.read())
 			with closing(ZipFile(f, 'r')) as zf:
@@ -403,6 +410,9 @@ class MyShowsAPI(object):
 	myshows = None
 	myshows_ep = None
 
+	base_url = 'https://api.myshows.me/shows/search/?q='
+	user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
 	dictMyShows = {
 		'title': 'title',
 		'airDate': 'aired',
@@ -413,6 +423,12 @@ class MyShowsAPI(object):
 		'started': 'premiered'
 	}
 
+	@staticmethod
+	def _json(url):
+		r = requests.get(url, timeout=15, headers={'User-Agent': MyShowsAPI.user_agent})
+		r.raise_for_status()
+		return r.json()
+
 	def __init__(self, title, ruTitle, imdbId=None):
 		if imdbId:
 			try:
@@ -422,17 +438,21 @@ class MyShowsAPI(object):
 				imdbId = None
 
 		from ..util import quote
-		base_url = 'http://api.myshows.me/shows/search/?q='
+		base_url = self.base_url
 		url = base_url + quote(title.encode('utf-8'))
 		try:
-			self.myshows = json.load(urlopen(url))
-		except HTTPError as e:
+			self.myshows = self._json(url)
+		except Exception as e:
 			debug('TVShowAPI: ' + str(e))
 			return
 
 		if not self.valid():
 			url = base_url + quote(ruTitle.encode('utf-8'))
-			self.myshows = json.load(urlopen(url))
+			try:
+				self.myshows = self._json(url)
+			except Exception as e:
+				debug('TVShowAPI: ' + str(e))
+				return
 
 		if self.valid():
 			debug(url)
@@ -440,8 +460,11 @@ class MyShowsAPI(object):
 			id = self.get_myshows_id(imdbId)
 			debug(id)
 			if id != 0:
-				url = 'http://api.myshows.me/shows/' + str(id)
-				self.myshows_ep = json.load(urlopen(url))
+				url = 'https://api.myshows.me/shows/' + str(id)
+				try:
+					self.myshows_ep = self._json(url)
+				except Exception as e:
+					debug('TVShowAPI: ' + str(e))
 				if self.valid_ep():
 					debug(url)
 
